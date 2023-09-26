@@ -108,14 +108,13 @@
                            , resampling = "near"
                            )
     
+    cloud_mask <- gdalcubes::image_mask(mask$band
+                                        , values = mask$mask
+                                        ) # clouds and cloud shadows
     
     # pixel count -------
     
     if(do_pixel_count) {
-    
-      use_mask <- gdalcubes::image_mask(mask$band
-                                        , values = mask$mask
-                                        ) # clouds and cloud shadows
       
       pixel_file <- fs::path(settings$ras_save_dir
                            , paste0("pixel_count__", start_date, ".tif")
@@ -129,7 +128,7 @@
         
         r <- gdalcubes::raster_cube(col
                                     , v_cat
-                                    , mask = use_mask
+                                    , mask = cloud_mask
                                     ) %>%
           gdalcubes::select_bands(mask$band) %>%
           gdalcubes::reduce_time(paste0("count("
@@ -169,7 +168,7 @@
                     
                     r <- gdalcubes::raster_cube(col
                                                 , v_num
-                                                , mask = use_mask
+                                                , mask = cloud_mask
                                                 ) %>%
                       gdalcubes::select_bands(x) %>%
                       gdalcubes::reduce_time(names = x
@@ -213,7 +212,7 @@
                      
                      r <- gdalcubes::raster_cube(col
                                                  , v_num
-                                                 , mask = use_mask
+                                                 , mask = cloud_mask
                                                  ) %>%
                        gdalcubes::select_bands(c(.x[[1]], .x[[2]])) %>%
                        apply_pixel(paste0("("
