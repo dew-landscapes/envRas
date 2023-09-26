@@ -1,5 +1,10 @@
   
   
+  # max_cores-----
+  
+  max_cores <- 8
+  
+
   # packages------
   
   packages <- 
@@ -56,15 +61,27 @@
   
   # options-------
   
-  gdalcubes_options(parallel = 4) 
+  gdalcubes_options(parallel = max_cores) 
   
   tmap_mode("view")
+  
+  # Sys.setenv(AWS_NO_SIGN_REQUEST = "YES")
+  
+  # see https://gdalcubes.github.io/source/concepts/config.html
+  gdalcubes_set_gdal_config("VSI_CACHE", "TRUE")
+  gdalcubes_set_gdal_config("GDAL_CACHEMAX","30%")
+  gdalcubes_set_gdal_config("VSI_CACHE_SIZE","100000000")
+  gdalcubes_set_gdal_config("GDAL_HTTP_MULTIPLEX","YES")
+  gdalcubes_set_gdal_config("GDAL_INGESTED_BYTES_AT_OPEN","32000")
+  gdalcubes_set_gdal_config("GDAL_DISABLE_READDIR_ON_OPEN","EMPTY_DIR")
+  gdalcubes_set_gdal_config("GDAL_HTTP_VERSION","2")
+  gdalcubes_set_gdal_config("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES","YES")
   
   
   # settings------
   
   settings <- list(use_epsg = 7845
-                   , target_res = 10
+                   , use_res = 30
                    , sample_n = 9999
                    )
   
@@ -72,17 +89,17 @@
   
   settings$use_collection <- "ga_ls8c_ard_3"
   
-  settings$layer <- "parks"
+  settings$use_period <- "P3M"
   
-  settings$filt_col <- "RESNAME"
+  settings$layer <- "lsa"
   
-  settings$use_aoi <- "Bakara"
+  settings$filt_col <- "LSA"
+  
+  settings$use_aoi <- "EP"
   
   settings$use_bbox <- TRUE
   
-  settings$use_buffer <- 5000
-  
-  settings$use_res <- 30
+  settings$use_buffer <- 50000
   
   settings$start_year <- 2015
   settings$end_year <- 2022
@@ -90,8 +107,6 @@
   settings$seasons <- make_seasons(settings$start_year
                                    , settings$end_year
                                    )
-  
-  settings$use_cores <- 4
   
   
   # directories------
@@ -101,17 +116,18 @@
                        , "data"
                        )
   
-  ras_save_dir <- fs::path("out"
-                           , paste(settings$use_source
-                                   , settings$use_collection
-                                   , settings$use_aoi
-                                   , settings$use_buffer
-                                   , settings$use_res
-                                   , sep = "__"
-                                   )
-                           )
+  settings$ras_save_dir <- fs::path("out"
+                                    , paste(settings$use_source
+                                            , settings$use_collection
+                                            , settings$use_aoi
+                                            , settings$use_buffer
+                                            , settings$use_res
+                                            , settings$use_period
+                                            , sep = "__"
+                                            )
+                                    )
   
-  fs::dir_create(ras_save_dir)
+  fs::dir_create(settings$ras_save_dir)
   
   
   # boundary-------
@@ -132,242 +148,76 @@
   if(FALSE) tm_shape(settings$boundary) + tm_polygons()
   
   
-  # cubes-------
+  # seasons-------
   
-  cubes <- settings$seasons$months %>%
+  stacks <- settings$seasons$months %>%
+    dplyr::filter(season %in% c("summer", "autumn")) %>%
     dplyr::group_by(year_use, season) %>%
     dplyr::summarise(start_date = min(start_date)
                      , end_date = max(end_date)
                      ) %>%
-    dplyr::ungroup() %>%
-    #dplyr::slice(3) %>% # TESTING
-    dplyr::mutate(stack = purrr::map2(start_date
-                                      , end_date
-                                      , make_sat_data
-                                      , settings = settings
-                                      , force_new = FALSE
-                                      )
-                  )
+    dplyr::ungroup() 
   
   
-  # make satellite data-------
+  # get data-------
+    
+  purrr::walk2(stacks$start_date
+               , stacks$end_date
+               , make_sat_data
+               , settings = settings
+               , force_new = F
+               , categorical = list(band = "oa_fmask"
+                                    , water = c(5)
+                                    )
+               )
   
-  make_sat_data <- function(start_date
-                            , end_date
-                            , settings
-                            , force_new = FALSE
-                            , get_bands = c("blue", "red", "green"
-                                            , "swir_1", "swir_2", "coastal_aerosol"
-                                            , "nir", "oa_fmask"
-                                            )
-                            , indices = list(gdvi = c("green", "nir")
-                                             , ndvi = c("nir", "red")
-                                             , nbr = c("nir", "swir_1")
-                                             , nbr2 = c("nir", "swir_2")
-                                             )
-                            ) {
   
-    
-    # find images--------
-    items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
-      rstac::stac_search(collections = settings$use_collection
-                         , bbox = sf::st_bbox(settings$boundary)
-                         , datetime = paste0(start_date
-                                             , "/"
-                                             , end_date
-                                             )
-                         , limit = 1000
-                         ) %>%
-      rstac::get_request()
+  # test satellite data-------
   
-    get_bands <- items %>%
-      rstac::items_assets() %>%
-      grep(paste0(get_bands, collapse = "|"), ., value = TRUE)
-    
-    col <- gdalcubes::stac_image_collection(items$features
-                                            , asset_names = get_bands
-                                            , property_filter = function(x) {x[["eo:cloud_cover"]] < 30}
-                                            )
-  
-    # bbox-------
-    bbox <- settings$boundary %>%
-      sf::st_transform(crs = settings$use_epsg) %>%
-      sf::st_bbox()
-    
-    # extent-------
-    use_extent <- list(left = bbox["xmin"][[1]]
-                       , right = bbox["xmax"][[1]]
-                       , top = bbox["ymax"][[1]]
-                       , bottom = bbox["ymin"][[1]]
-                       , t0 = as.character(start_date)
-                       , t1 = as.character(end_date)
-                       #, srs = paste0("EPSG:", settings$use_epsg)
-                       )
-    
-    # cube setup------
-    v <- gdalcubes::cube_view(srs = paste0("EPSG:"
-                                           , settings$use_epsg
-                                           )
-                              , extent = use_extent
-                              , dx = 30 #ceiling(abs(use_extent$left - use_extent$right) / 30)
-                              , dy = 30 #ceiling(abs(use_extent$top - use_extent$bottom) / 30)
-                              , dt = "P3M"
-                              , aggregation = "median"
-                              , resampling = "bilinear"
-                              )
-    
-    # cloud mask -------
-    cloud_mask <- gdalcubes::image_mask("oa_fmask", values=c(2, 3)) # clouds and cloud shadows
-  
-    # process bands------
-    purrr::walk(head(get_bands, -1)
-                , function(x) {
-                  
-                  out_file <- fs::path(ras_save_dir
-                                       , paste0(gsub("nbart_", "", x), "__", start_date, ".tif")
-                                       )
-                  
-                  run <- if(!file.exists(out_file)) TRUE else force_new
-                  
-                  if(run) {
-                  
-                    r <- gdalcubes::raster_cube(col
-                                                , v
-                                                , mask = cloud_mask
-                                                ) %>%
-                      gdalcubes::select_bands(x) %>%
-                      gdalcubes::reduce_time(names = x
-                                             , FUN = function(a) {
-                                               
-                                               median(a, na.rm = TRUE)
-                                               
-                                             }
-                                             )
-                    
-                    gdalcubes::write_tif(r
-                                         , dir = ras_save_dir
-                                         , prefix = paste0(gsub("nbart_", "", x), "__")
-                                         )
-                    
-                    }
-                    
-                  }
-                
-                )
-    
-    # process indices-------
-    purrr::iwalk(indices
-                 , ~ {
-                  
-                   print(.y)
-                   
-                   out_file <- fs::path(ras_save_dir
-                                        , paste0(.y, "__", start_date, ".tif")
-                                        )
-                  
-                  
-                   run <- if(!file.exists(out_file)) TRUE else force_new
-                   
-                   if(run) {
-                     
-                     .x[[1]] <- grep(.x[[1]], get_bands, value = TRUE)
-                     .x[[2]] <- grep(.x[[2]], get_bands, value = TRUE)
-                     
-                     r <- gdalcubes::raster_cube(col
-                                                 , v
-                                                 , mask = cloud_mask
-                                                 ) %>%
-                       gdalcubes::select_bands(c(.x[[1]], .x[[2]])) %>%
-                       apply_pixel(paste0("("
-                                          , .x[[1]]
-                                          , "-"
-                                          , .x[[2]]
-                                          , ")/("
-                                          , .x[[1]]
-                                          , "+"
-                                          , .x[[2]]
-                                          , ")"
-                                          )
-                                   , .y
-                       ) %>%
-                      gdalcubes::reduce_time(names = .y
-                                             , FUN = function(a) {
-                                               
-                                               median(a, na.rm = TRUE)
-                                               
-                                             }
-                                             )
-                    
-                    gdalcubes::write_tif(r
-                                         , dir = ras_save_dir
-                                         , prefix = paste0(.y, "__")
-                                         )
-                    
-                  }
-                  
-                }
-    )
-    
-    
-    stack <- fs::dir_info(ras_save_dir
-                         , regexp = "tif$"
-                         ) %>%
-      dplyr::filter(grepl(paste0(c(gsub("nbart_", "", get_bands)
-                                   , names(indices)
-                                   )
-                                 , collapse = "|"
-                                 )
-                          , path
-                          )
-                    ) %>%
-      dplyr::mutate(name = gsub("\\.tif", "", basename(path))) %>%
-      tidyr::separate(name, into = c("band", "date"), sep = "__") %>%
-      dplyr::select(path, band, date) %>%
-      dplyr::mutate(date = as.Date(date)) %>%
-      dplyr::filter(date == start_date) %>%
-      dplyr::pull(path) %>%
-      terra::rast()
-    
-    return(stack)
-    
-  }
-  
-  temp <- fs::dir_info(ras_save_dir
+  temp <- fs::dir_info(settings$ras_save_dir
                        , regexp = "tif$"
                        ) %>%
-    dplyr::filter(modification_time == max(modification_time)) %>%
+    dplyr::arrange(desc(modification_time)) %>%
+    #dplyr::filter(grepl("count|water", path)) %>%
+    dplyr::slice(1:15) %>%
     dplyr::pull(path) %>%
-    `[[`(1) %>%
     terra::rast()
   
   terra::plot(temp)
   
-  # animate-------
   
-  library(colorspace)
+  if(FALSE) {
+    
+    plot(temp, key.pos = 1, col = viridis::viridis, nbreaks = 10)
+    
+    # animate-------
+    
+    library(colorspace)
+    
+    ndvi.col = function(n) {
+      
+      rev(sequential_hcl(n, "Green-Yellow"))
+      
+    }
+    
+    v <- v %>%
+      cube_view(dt = "P1M"
+                , aggregation = "median"
+                , resampling = "bilinear"
+                )
+    
+    gdalcubes::raster_cube(col
+                           , v
+                           ) %>%
+      gdalcubes::apply_pixel("(nbart_nir-nbart_red)/(nbart_nir+nbart_red)", "NDVI") %>%
+      gdalcubes::animate(col = ndvi.col
+                         , zlim = c(-0.5, 1)
+                         , key.pos = 1
+                         , save_as = "anim.gif"
+                         , fps = 4
+                         )
   
-  ndvi.col = function(n) {
-    
-    rev(sequential_hcl(n, "Green-Yellow"))
-    
   }
-  
-  v <- v %>%
-    cube_view(dt = "P1M"
-              , aggregation = "median"
-              , resampling = "bilinear"
-              )
-  
-  gdalcubes::raster_cube(col
-                         , v
-                         ) %>%
-    gdalcubes::apply_pixel("(nbart_nir-nbart_red)/(nbart_nir+nbart_red)", "NDVI") %>%
-    gdalcubes::animate(col = ndvi.col
-                       , zlim = c(-0.5, 1)
-                       , key.pos = 1
-                       , save_as = "anim.gif"
-                       , fps = 4
-                       )
   
   
   
