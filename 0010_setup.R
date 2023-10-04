@@ -78,31 +78,7 @@
   gdalcubes_set_gdal_config("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES","YES")
   
   
-  # settings------
-  
-  settings <- list(use_epsg = 7845
-                   , use_res = 30
-                   , sample_n = 9999
-                   )
-  
-  settings$use_source <- "DEA"
-  
-  settings$use_collection <- "ga_ls8c_ard_3"
-  
-  settings$use_period <- "P3M"
-  
-  settings$layer <- "lsa"
-  
-  settings$filt_col <- "LSA"
-  
-  settings$use_aoi <- "EP"
-  
-  settings$use_bbox <- TRUE
-  
-  settings$use_buffer <- 50000
-  
-  settings$start_year <- 2015
-  settings$end_year <- 2022
+  # seasons-------
   
   settings$seasons <- make_seasons(settings$start_year
                                    , settings$end_year
@@ -116,18 +92,47 @@
                        , "data"
                        )
   
-  settings$ras_save_dir <- fs::path("out"
-                                    , paste(settings$use_source
-                                            , settings$use_collection
+  settings$sat_save_dir <- fs::path(data_dir
+                                    , "raster"
+                                    , paste0("cube"
+                                             , "__"
+                                             , settings$use_period
+                                             )
+                                    , paste(settings$sat_source
+                                            , paste(settings$sat_collection, collapse = "--")
                                             , settings$use_aoi
                                             , settings$use_buffer
                                             , settings$use_res
-                                            , settings$use_period
                                             , sep = "__"
                                             )
                                     )
   
-  fs::dir_create(settings$ras_save_dir)
+  settings$cli_save_dir <- fs::path(data_dir
+                                    , "raster"
+                                    , paste0("cube"
+                                             , "__"
+                                             , settings$use_period
+                                             )
+                                    , paste(settings$cli_source
+                                            , paste(settings$cli_collection, collapse = "--")
+                                            , settings$use_aoi
+                                            , settings$use_buffer
+                                            , settings$use_res
+                                            , sep = "__"
+                                            )
+                                    )
+  
+  settings$munged_dir <- fs::path("D:"
+                         , "env"
+                         , "data"
+                         , "raster"
+                         , "aligned"
+                         , paste(settings$use_aoi
+                                 , settings$use_buffer
+                                 , settings$use_res
+                                 , sep = "__"
+                                 )
+                         )
   
   
   # boundary-------
@@ -148,6 +153,29 @@
   if(FALSE) tm_shape(settings$boundary) + tm_polygons()
   
   
+  # bboxes-------
+  
+  settings$bbox <- sf::st_bbox(settings$boundary)
+    
+  settings$bbox_use_epsg <- settings$boundary %>%
+    sf::st_transform(crs = settings$use_epsg) %>%
+    sf::st_bbox()
+
+  settings$bbox_adj <- settings$use_res * ceiling(100 / settings$use_res)
+  
+  settings$use_extent <- list(left = round(floor(settings$bbox_use_epsg["xmin"][[1]]), -2) - settings$bbox_adj
+                              , right = round(ceiling(settings$bbox_use_epsg["xmax"][[1]]), -2) + settings$bbox_adj
+                              , top = round(ceiling(settings$bbox_use_epsg["ymax"][[1]]), -2) + settings$bbox_adj
+                              , bottom = round(floor(settings$bbox_use_epsg["ymin"][[1]]), -2) - settings$bbox_adj
+                              )  
+  
+  rio::export(settings
+              , fs::path(settings$munged_dir
+                         , "settings.rds"
+                         )
+              )
+  
+  
   # seasons-------
   
   stacks <- settings$seasons$months %>%
@@ -157,69 +185,4 @@
                      , end_date = max(end_date)
                      ) %>%
     dplyr::ungroup() 
-  
-  
-  # get data-------
-    
-  purrr::walk2(stacks$start_date
-               , stacks$end_date
-               , make_sat_data
-               , settings = settings
-               , force_new = F
-               , categorical = list(band = "oa_fmask"
-                                    , water = c(5)
-                                    )
-               )
-  
-  
-  # test satellite data-------
-  
-  temp <- fs::dir_info(settings$ras_save_dir
-                       , regexp = "tif$"
-                       ) %>%
-    dplyr::arrange(desc(modification_time)) %>%
-    #dplyr::filter(grepl("count|water", path)) %>%
-    dplyr::slice(1:15) %>%
-    dplyr::pull(path) %>%
-    terra::rast()
-  
-  terra::plot(temp)
-  
-  
-  if(FALSE) {
-    
-    plot(temp, key.pos = 1, col = viridis::viridis, nbreaks = 10)
-    
-    # animate-------
-    
-    library(colorspace)
-    
-    ndvi.col = function(n) {
-      
-      rev(sequential_hcl(n, "Green-Yellow"))
-      
-    }
-    
-    v <- v %>%
-      cube_view(dt = "P1M"
-                , aggregation = "median"
-                , resampling = "bilinear"
-                )
-    
-    gdalcubes::raster_cube(col
-                           , v
-                           ) %>%
-      gdalcubes::apply_pixel("(nbart_nir-nbart_red)/(nbart_nir+nbart_red)", "NDVI") %>%
-      gdalcubes::animate(col = ndvi.col
-                         , zlim = c(-0.5, 1)
-                         , key.pos = 1
-                         , save_as = "anim.gif"
-                         , fps = 4
-                         )
-  
-  }
-  
-  
-  
-  
   
