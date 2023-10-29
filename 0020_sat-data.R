@@ -3,9 +3,11 @@
   
   fs::dir_create(settings$sat_save_dir)
   
+  safe_sat <- purrr::safely(make_sat_data)
+  
   purrr::walk2(stacks$start_date
                , stacks$end_date
-               , make_sat_data
+               , safe_sat
                , settings = settings
                , force_new = F
                )

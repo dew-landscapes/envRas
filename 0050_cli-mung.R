@@ -39,11 +39,18 @@
   
   align_func <- function(stack, out_file, base, ...) {
     
-    stack %>%
+    reproj <- stack %>%
       terra::app(fun = quantile
                  , ...
+                 # , na.rm = TRUE
+                 # , probs = qs
                  ) %>%
-      terra::project(terra::crs(base)) %>%
+      terra::project(terra::crs(base))
+    
+    ratio <- terra::res(reproj) / terra::res(base)
+    
+    reproj %>%
+      terra::disagg(ratio) %>%
       terra::project(base) %>%
       terra::writeRaster(out_file
                          , overwrite = FALSE

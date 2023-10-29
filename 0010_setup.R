@@ -2,7 +2,7 @@
   
   # max_cores-----
   
-  max_cores <- 5
+  max_cores <- 10
   
 
   # packages------
@@ -169,43 +169,22 @@
   
   # bboxes-------
   
-  bbox <- sf::st_bbox(settings$boundary)
+  # geographic
+  settings$bbox <- sf::st_bbox(settings$boundary)
     
-  bbox_use_epsg <- settings$boundary %>%
+  # projected
+  settings$bbox_use_epsg <- settings$boundary %>%
     sf::st_transform(crs = settings$use_epsg) %>%
     sf::st_bbox()
 
   bbox_adj <- settings$use_res * ceiling(100 / settings$use_res)
   
-  settings$use_extent <- list(left = round(floor(bbox_use_epsg["xmin"][[1]]), -2) - bbox_adj
-                              , right = round(ceiling(bbox_use_epsg["xmax"][[1]]), -2) + bbox_adj
-                              , top = round(ceiling(bbox_use_epsg["ymax"][[1]]), -2) + bbox_adj
-                              , bottom = round(floor(bbox_use_epsg["ymin"][[1]]), -2) - bbox_adj
+  settings$use_extent <- list(left = round(floor(settings$bbox_use_epsg["xmin"][[1]]), -2) - bbox_adj
+                              , right = round(ceiling(settings$bbox_use_epsg["xmax"][[1]]), -2) + bbox_adj
+                              , top = round(ceiling(settings$bbox_use_epsg["ymax"][[1]]), -2) + bbox_adj
+                              , bottom = round(floor(settings$bbox_use_epsg["ymin"][[1]]), -2) - bbox_adj
                               )
   
-  check_x <- (settings$use_extent$left - settings$use_extent$right) %% settings$use_res
-  check_y <- (settings$use_extent$top - settings$use_extent$bottom) %% settings$use_res
-  
-  if(check_x != 0) settings$use_extent$right <- settings$use_extent$right + (check_x * settings$use_res / settings$use_res)
-  if(check_y != 0) settings$use_extent$bottom <- settings$use_extent$bottom + (check_y * settings$use_res / settings$use_res)
-  
-  settings$bbox <- terra::ext(as.vector(unlist(settings$use_extent[c(1, 2, 4, 3)])))
-  
-  # STILL NEED TO MAKE SURE ALIGNED SAT == ALIGNED CLI
-  
-  # base grid------
-  # base grid using settings$aoi and settings$boundary
-  
-  settings$base_grid <- terra::rast(extent = settings$bbox
-                                    , crs = terra::crs(paste0("epsg:", settings$use_epsg))
-                                    , resolution = settings$use_res
-                                    , vals = 1
-                                    ) %>%
-    terra::mask(settings$aoi %>%
-                  sf::st_transform(settings$use_epsg)
-                ) %>%
-    tidyterra::rename("aoi" = 1)
-                           
   
   # save-------
   rio::export(settings

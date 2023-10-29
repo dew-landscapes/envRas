@@ -18,9 +18,9 @@
   
   settings$layer <- "lsa"
   settings$filt_col <- "LSA"
-  settings$use_aoi <- "KI"
+  settings$use_aoi <- "HF"
   settings$use_bbox <- TRUE
-  settings$use_buffer <- 5000
+  settings$use_buffer <- 50000
   
   settings$start_year <- 2014
   settings$end_year <- 2023
@@ -29,9 +29,9 @@
   #----------RUN---------
   
   if(!exists("run_from")) run_from <- 0
-  if(!exists("run_to")) run_to <- 40
+  if(!exists("run_to")) run_to <- 50
   
-  skips <- "sat"
+  # skips <- "sat"
   
   dir() %>%
     grep("^\\d{4}_.*\\.R$",.,value=TRUE) %>%

@@ -1,5 +1,28 @@
 
-  #
+  # base grid------
+  # base grid using settings$aoi and settings$boundary
+  
+  settings$base_grid <- settings$sat_save_dir %>%
+    fs::dir_ls() %>%
+    `[`(1) %>%
+    terra::rast() %>%
+    terra::setValues(1) %>%
+    terra::mask(settings$aoi %>%
+                  sf::st_transform(settings$use_epsg)
+                ) %>%
+    tidyterra::rename("aoi" = 1)
+  
+  
+  # save-------
+  
+  rio::export(settings
+              , fs::path(settings$munged_dir
+                         , "settings.rds"
+                         )
+              )
+  
+  
+  # Climate-------
 
   fs::dir_create(settings$cli_save_dir)
   
@@ -17,7 +40,7 @@
   
   safe_nc <- purrr::safely(stars::read_ncdf)
   
-  make_cli_data <- function(urls_df, out_file, func) {
+  make_cli_data <- function(urls_df, out_file, func, base) {
     
     r <- purrr::map(urls_df$file
                , safe_nc
@@ -30,10 +53,11 @@
     
       r %>%
         purrr::map(sf::st_set_crs, 4283) %>%
-        purrr::map(., ~ .[sf::st_bbox(settings$boundary %>%
-                                        sf::st_transform(crs = 4283)
-                                      )
-                          ]
+        purrr::map(.
+                   , ~ .[sf::st_bbox(base) %>%
+                           sf::st_as_sfc() %>%
+                           sf::st_transform(crs = 4283)
+                         ]
                    ) %>%
         purrr::map(stars::st_as_stars
                    , proxy = FALSE
@@ -81,6 +105,7 @@
                     , files$func[!files$done]
                     )
                , make_cli_data
+               , base = settings$base_grid
                )
   
   
