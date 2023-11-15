@@ -36,8 +36,8 @@
     
     # find images--------
     items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
-      rstac::stac_search(collections = settings$sat_collection
-                         , bbox = settings$bbox
+      rstac::stac_search(collections = settings[["sat_collection", exact = TRUE]]
+                         , bbox = settings[["bbox", exact = TRUE]]
                          , datetime = paste0(as.character(start_date)
                                              , "/"
                                              , as.character(end_date)
@@ -56,7 +56,7 @@
                                             , property_filter = function(x) {x[["eo:cloud_cover"]] < 50}
                                             )
     
-    use_extent <- c(settings$use_extent
+    use_extent <- c(settings[["use_extent", exact = TRUE]]
                     , t0 = as.character(start_date)
                     , t1 = as.character(end_date)
                     )
@@ -64,12 +64,12 @@
     # cube setup------
     
     v_num <- gdalcubes::cube_view(srs = paste0("EPSG:"
-                                           , settings$use_epsg
+                                           , settings[["epsg_proj", exact = TRUE]]
                                            )
                               , extent = use_extent
-                              , dx = settings$use_res #ceiling(abs(use_extent$left - use_extent$right) / 30)
-                              , dy = settings$use_res #ceiling(abs(use_extent$top - use_extent$bottom) / 30)
-                              , dt = settings$use_period
+                              , dx = settings[["use_res", exact = TRUE]] #ceiling(abs(use_extent$left - use_extent$right) / 30)
+                              , dy = settings[["use_res", exact = TRUE]] #ceiling(abs(use_extent$top - use_extent$bottom) / 30)
+                              , dt = settings[["use_period", exact = TRUE]]
                               , aggregation = "median"
                               , resampling = "bilinear"
                               )
@@ -87,7 +87,7 @@
     
     if(do_pixel_count) {
       
-      pixel_file <- fs::path(settings$sat_save_dir
+      pixel_file <- fs::path(settings[["sat_save_dir", exact = TRUE]]
                            , paste0("pixel_count__", start_date, ".tif")
                            )
       
@@ -109,7 +109,7 @@
                                  )
         
         gdalcubes::write_tif(r
-                             , dir = settings$sat_save_dir
+                             , dir = settings[["sat_save_dir", exact = TRUE]]
                              , prefix = "pixel_count__"
                              )
         
@@ -129,7 +129,7 @@
                   
                   message(x)
                   
-                  out_file <- fs::path(settings$sat_save_dir
+                  out_file <- fs::path(settings[["sat_save_dir", exact = TRUE]]
                                        , paste0(gsub("nbart_", "", x), "__", start_date, ".tif")
                                        )
                   
@@ -151,7 +151,7 @@
                                              )
                     
                     gdalcubes::write_tif(r
-                                         , dir = settings$sat_save_dir
+                                         , dir = settings[["sat_save_dir", exact = TRUE]]
                                          , prefix = paste0(gsub("nbart_", "", x), "__")
                                          )
                     
@@ -169,7 +169,7 @@
                    
                    message(.y)
                    
-                   out_file <- fs::path(settings$sat_save_dir
+                   out_file <- fs::path(settings[["sat_save_dir", exact = TRUE]]
                                         , paste0(.y, "__", start_date, ".tif")
                                         )
                    
@@ -208,7 +208,7 @@
                                               )
                      
                      gdalcubes::write_tif(r
-                                          , dir = settings$sat_save_dir
+                                          , dir = settings[["sat_save_dir", exact = TRUE]]
                                           , prefix = paste0(.y, "__")
                                           )
                      
@@ -228,7 +228,7 @@
                                     
                      message(.y)
                      
-                     out_file <- fs::path(settings$sat_save_dir
+                     out_file <- fs::path(settings[["sat_save_dir", exact = TRUE]]
                                           , paste0(.y, "__", start_date, ".tif")
                                           )
                                             
@@ -253,7 +253,7 @@
                                                        )
                                                 )
                        
-                       temp_file <- fs::path(settings$sat_save_dir
+                       temp_file <- fs::path(settings[["sat_save_dir", exact = TRUE]]
                                              , "temp"
                                              , paste0(.y, "__", start_date, ".tif")
                                              )
@@ -294,7 +294,7 @@
       
       # stack------
       
-      stack <- fs::dir_info(settings$sat_save_dir
+      stack <- fs::dir_info(settings[["sat_save_dir", exact = TRUE]]
                             , regexp = "tif$"
                             ) %>%
         dplyr::filter(grepl(paste0(c(gsub("nbart_", "", get_bands)

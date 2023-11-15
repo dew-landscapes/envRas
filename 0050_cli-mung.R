@@ -11,15 +11,15 @@
                  , "layer"
                  )
 
-  epoch_seasons <- envFunc::make_epochs(start_year = settings$start_year
-                                        , end_year = settings$end_year
+  epoch_seasons <- envFunc::make_epochs(start_year = settings[["start_year", exact = TRUE]]
+                                        , end_year = settings[["end_year", exact = TRUE]]
                                         , epoch_step = 10
                                         , epoch_overlap = FALSE
                                         ) %>%
     tidyr::unnest(cols = c(years)) %>%
     dplyr::rename(year = years) %>%
     dplyr::select(year, epoch) %>%
-    dplyr::left_join(settings$seasons$seasons) %>%
+    dplyr::left_join(settings[["seasons", exact = TRUE]]$seasons) %>%
     dplyr::left_join(results) %>%
     dplyr::filter(!is.na(path)) %>%
     tidyr::nest(data = -c(source, collection, aoi, buffer, res, layer, epoch, season)) %>%
@@ -27,7 +27,7 @@
     dplyr::mutate(stack = purrr::map(data
                                      , ~ terra::rast(.$path)
                                      )
-                  , out_file = fs::path(settings$munged_dir
+                  , out_file = fs::path(settings[["munged_dir", exact = TRUE]]
                                         , paste0(out_file, ".tif")
                                         )
                   , done = file.exists(out_file)
@@ -35,7 +35,7 @@
   
   qs <- c(0.05, 0.50, 0.95)
   
-  fs::dir_create(settings$munged_dir)
+  fs::dir_create(settings[["munged_dir)", exact = TRUE]]
   
   align_func <- function(stack, out_file, base, ...) {
     
@@ -63,7 +63,7 @@
   purrr::walk2(epoch_seasons$stack[!epoch_seasons$done]
                , epoch_seasons$out_file[!epoch_seasons$done]
                , align_func
-               , base = settings$base_grid
+               , base = settings[["base_grid", exact = TRUE]]
                , na.rm = TRUE
                , probs = qs
                )

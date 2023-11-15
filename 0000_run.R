@@ -3,9 +3,10 @@
   
   # settings------
   
-  settings <- list(use_epsg = 7845
+  settings <- list(epsg_proj = 7845
                    , use_res = 30
                    , sample_n = 9999
+                   , epsg_latlong = 4283 # for decimal degrees
                    )
   
   settings$sat_source <- "DEA"
@@ -16,11 +17,13 @@
   
   settings$use_period <- "P3M"
   
-  settings$layer <- "lsa"
-  settings$filt_col <- "LSA"
-  settings$use_aoi <- "HF"
-  settings$use_bbox <- TRUE
-  settings$use_buffer <- 50000
+  settings$layer <- "sa_ibrasub_xn"
+  settings$filt_col <- NULL
+  settings$use_aoi <- "sa_ibrasub_xn"
+  settings$use_bbox <- FALSE
+  settings$use_buffer <- 0
+  settings$use_clip <- NULL
+  settings$use_clip_buffer <- 0
   
   settings$start_year <- 2014
   settings$end_year <- 2023

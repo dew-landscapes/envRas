@@ -2,13 +2,13 @@
   # base grid------
   # base grid using settings$aoi and settings$boundary
   
-  settings$base_grid <- settings$sat_save_dir %>%
+  settings[["base_grid", exact = TRUE]] <- settings[["sat_save_dir", exact = TRUE]] %>%
     fs::dir_ls() %>%
     `[`(1) %>%
     terra::rast() %>%
     terra::setValues(1) %>%
-    terra::mask(settings$aoi %>%
-                  sf::st_transform(settings$use_epsg)
+    terra::mask(settings[["aoi", exact = TRUE]] %>%
+                  sf::st_transform(settings[["use_epsg", exact = TRUE]])
                 ) %>%
     tidyterra::rename("aoi" = 1)
   
@@ -16,7 +16,7 @@
   # save-------
   
   rio::export(settings
-              , fs::path(settings$munged_dir
+              , fs::path(settings[["munged_dir", exact = TRUE]]
                          , "settings.rds"
                          )
               )
@@ -24,7 +24,7 @@
   
   # Climate-------
 
-  fs::dir_create(settings$cli_save_dir)
+  fs::dir_create(settings[["cli_save_dir", exact = TRUE]])
   
   
   library(ncdf4)
@@ -34,8 +34,7 @@
   base_url <- "https://dapds00.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"
   
   get_layers <- tibble::tibble(
-    layer = c("rain", "evap", "srad", "tavg", "vpd")
-    ) %>%
+    layer = c("rain", "evap", "srad", "tavg", "vpd")) %>%
     dplyr::mutate(func = list(mean))
   
   safe_nc <- purrr::safely(stars::read_ncdf)
@@ -72,7 +71,7 @@
     
   }
 
-  files <- settings$seasons$months %>%
+  files <- settings[["seasons", exact = TRUE]]$months %>%
     dplyr::cross_join(get_layers) %>%
     dplyr::mutate(file_specific = format(start_date, "%Y%m")
                   , file = paste0(base_url
@@ -91,9 +90,9 @@
                   ) %>%
     dplyr::select(year = year_use, season, layer, func, file) %>%
     tidyr::nest(data = -c(year, season, layer, func)) %>%
-    dplyr::left_join(settings$seasons$season) %>%
+    dplyr::left_join(settings[["seasons", exact = TRUE]]$season) %>%
     #dplyr::sample_n(1) %>% # TESTING
-    dplyr::mutate(out_file = fs::path(settings$cli_save_dir
+    dplyr::mutate(out_file = fs::path(settings[["cli_save_dir", exact = TRUE]]
                                       , paste0(layer, "__", start_date,".tif")
                                       )
                   , done = file.exists(out_file)
@@ -111,7 +110,7 @@
   
   # results-------
   
-  results <- fs::dir_info(settings$cli_save_dir
+  results <- fs::dir_info(settings[["cli_save_dir", exact = TRUE]]
                           , regexp = "tif$"
                           ) %>%
     dplyr::arrange(desc(modification_time)) %>%

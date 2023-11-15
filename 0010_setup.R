@@ -2,7 +2,7 @@
   
   # max_cores-----
   
-  max_cores <- 10
+  max_cores <- 15
   
 
   # packages------
@@ -80,8 +80,8 @@
   
   # seasons-------
   
-  settings$seasons <- make_seasons(settings$start_year
-                                   , settings$end_year
+  settings$seasons <- make_seasons(settings[["start_year", exact = TRUE]]
+                                   , settings[["end_year", exact = TRUE]]
                                    )
   
   
@@ -96,13 +96,13 @@
                                     , "raster"
                                     , paste0("cube"
                                              , "__"
-                                             , settings$use_period
+                                             , settings[["use_period", exact = TRUE]]
                                              )
-                                    , paste(settings$sat_source
-                                            , paste(settings$sat_collection, collapse = "--")
-                                            , settings$use_aoi
-                                            , settings$use_buffer
-                                            , settings$use_res
+                                    , paste(settings[["sat_source", exact = TRUE]]
+                                            , paste(settings[["sat_collection", exact = TRUE]], collapse = "--")
+                                            , settings[["use_aoi", exact = TRUE]]
+                                            , settings[["use_buffer", exact = TRUE]]
+                                            , settings[["use_res", exact = TRUE]]
                                             , sep = "__"
                                             )
                                     )
@@ -111,13 +111,13 @@
                                     , "raster"
                                     , paste0("cube"
                                              , "__"
-                                             , settings$use_period
+                                             , settings[["use_period", exact = TRUE]]
                                              )
-                                    , paste(settings$cli_source
-                                            , paste(settings$cli_collection, collapse = "--")
-                                            , settings$use_aoi
-                                            , settings$use_buffer
-                                            , settings$use_res
+                                    , paste(settings[["cli_source", exact = TRUE]]
+                                            , paste(settings[["cli_collection", exact = TRUE]], collapse = "--")
+                                            , settings[["use_aoi", exact = TRUE]]
+                                            , settings[["use_buffer", exact = TRUE]]
+                                            , settings[["use_res", exact = TRUE]]
                                             , sep = "__"
                                             )
                                     )
@@ -127,75 +127,75 @@
                          , "data"
                          , "raster"
                          , "aligned"
-                         , paste(settings$use_aoi
-                                 , settings$use_buffer
-                                 , settings$use_res
+                         , paste(settings[["use_aoi", exact = TRUE]]
+                                 , settings[["use_buffer", exact = TRUE]]
+                                 , settings[["use_res", exact = TRUE]]
                                  , sep = "__"
                                  )
                          )
   
-  fs::dir_create(settings$munged_dir)
+  fs::dir_create(settings[["munged_dir", exact = TRUE]])
   
   
-  # boundary-------
+  # maps-------
+  
+  # sa
+  sa <- sfarrow::st_read_parquet(fs::path(data_dir
+                                          , "vector"
+                                          , "sa.parquet"
+                                          )
+                                 )
   
   # what aoi to use
-  settings$aoi <- envFunc::make_aoi(layer = sfarrow::st_read_parquet(fs::path(data_dir
-                                                                              , "vector"
-                                                                              , paste0(settings$layer
-                                                                                       , ".parquet"
-                                                                                       )
-                                                                              )
-                                                                     )
-                                    , filt_col = settings$filt_col
-                                    , level = settings$use_aoi
-                                    )
+  lay <- sfarrow::st_read_parquet(fs::path(data_dir
+                                           , "vector"
+                                           , paste0(settings[["layer", exact = TRUE]]
+                                                    , ".parquet"
+                                                    )
+                                           )
+                                  )
+    
+  settings$boundary <- make_aoi(layer = lay
+                           , filt_col = settings[["filt_col", exact = TRUE]]
+                           , level = settings[["use_aoi", exact = TRUE]]
+                           , buffer = settings[["use_buffer", exact = TRUE]]
+                           , bbox = settings[["use_bbox", exact = TRUE]]
+                           , clip = settings[["use_clip", exact = TRUE]]
+                           , clip_buf = settings[["use_clip_buffer", exact = TRUE]]
+                           )
   
-  settings$boundary <- make_aoi(layer = sfarrow::st_read_parquet(fs::path(data_dir
-                                                                          , "vector"
-                                                                          , paste0(settings$layer
-                                                                                   , ".parquet"
-                                                                                   )
-                                                                          )
-                                                                 )
-                                , filt_col = settings$filt_col
-                                , level = settings$use_aoi
-                                , buffer = settings$use_buffer
-                                , bbox = TRUE
-                                )
-  
-  if(FALSE) tm_shape(settings$boundary) + tm_polygons()
+  if(FALSE) tmap::tm_shape(settings[["boundary", exact = TRUE]]) + tmap::tm_polygons()
   
   
   # bboxes-------
   
   # geographic
-  settings$bbox <- sf::st_bbox(settings$boundary)
+  settings$bbox <- sf::st_bbox(settings[["boundary", exact = TRUE]])
     
   # projected
-  settings$bbox_use_epsg <- settings$boundary %>%
-    sf::st_transform(crs = settings$use_epsg) %>%
+  settings$bbox_use_epsg <- settings[["boundary", exact = TRUE]] %>%
+    sf::st_transform(crs = settings[["epsg_proj", exact = TRUE]]) %>%
     sf::st_bbox()
 
-  bbox_adj <- settings$use_res * ceiling(100 / settings$use_res)
+  bbox_adj <- settings[["use_res", exact = TRUE]] * ceiling(100 / settings$use_res)
   
-  settings$use_extent <- list(left = round(floor(settings$bbox_use_epsg["xmin"][[1]]), -2) - bbox_adj
-                              , right = round(ceiling(settings$bbox_use_epsg["xmax"][[1]]), -2) + bbox_adj
-                              , top = round(ceiling(settings$bbox_use_epsg["ymax"][[1]]), -2) + bbox_adj
-                              , bottom = round(floor(settings$bbox_use_epsg["ymin"][[1]]), -2) - bbox_adj
+  settings$use_extent <- list(left = round(floor(settings[["bbox_use_epsg", exact = TRUE]]["xmin"][[1]]), -2) - bbox_adj
+                              , right = round(ceiling(settings[["bbox_use_epsg", exact = TRUE]]["xmax"][[1]]), -2) + bbox_adj
+                              , top = round(ceiling(settings[["bbox_use_epsg", exact = TRUE]]["ymax"][[1]]), -2) + bbox_adj
+                              , bottom = round(floor(settings[["bbox_use_epsg", exact = TRUE]]["ymin"][[1]]), -2) - bbox_adj
                               )
   
   
   # save-------
   rio::export(settings
-              , fs::path(settings$munged_dir
+              , fs::path(settings[["munged_dir", exact = TRUE]]
                          , "settings.rds"
                          )
               )
                            
   # seasons-------
   
-  stacks <- settings$seasons$months %>%
+  stacks <- settings[["seasons", exact = TRUE]]$months %>%
     dplyr::filter(season %in% c("summer", "autumn")) %>%
     dplyr::group_by(year_use, season) %>%
     dplyr::summarise(start_date = min(start_date)
