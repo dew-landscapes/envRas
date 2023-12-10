@@ -2,15 +2,16 @@
   # base grid------
   # base grid using settings$aoi and settings$boundary
   
-  settings[["base_grid", exact = TRUE]] <- settings[["sat_save_dir", exact = TRUE]] %>%
-    fs::dir_ls() %>%
+  temp <- settings[["sat_cube_dir", exact = TRUE]] %>%
+    fs::dir_ls(regexp = "tif$") %>%
     `[`(1) %>%
-    terra::rast() %>%
-    terra::setValues(1) %>%
-    terra::mask(settings[["aoi", exact = TRUE]] %>%
-                  sf::st_transform(settings[["use_epsg", exact = TRUE]])
-                ) %>%
-    tidyterra::rename("aoi" = 1)
+    terra::rast()
+  
+  settings[["aoi"]] <- terra::rast(ext(temp)
+                                   , crs = terra::crs(temp)
+                                   ) %>%
+    terra::project(y = paste0("epsg:", settings$epsg_latlong)) %>%
+    stars::st_as_stars()
   
   
   # save-------
@@ -24,7 +25,7 @@
   
   # Climate-------
 
-  fs::dir_create(settings[["cli_save_dir", exact = TRUE]])
+  fs::dir_create(settings[["cli_cube_dir", exact = TRUE]])
   
   
   library(ncdf4)
@@ -33,36 +34,43 @@
   
   base_url <- "https://dapds00.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"
   
-  get_layers <- tibble::tibble(
-    layer = c("rain", "evap", "srad", "tavg", "vpd")) %>%
-    dplyr::mutate(func = list(mean))
+  get_layers <- tibble::tribble(
+    ~layer, ~func
+    ,"rain", "mean"
+    , "evap", "mean"
+    #, "srad", "mean"
+    , "tavg", "mean"
+    , "vpd", "mean"
+    , "tmin", "min"
+    , "tmax", "max"
+    )
   
   safe_nc <- purrr::safely(stars::read_ncdf)
   
   make_cli_data <- function(urls_df, out_file, func, base) {
     
     r <- purrr::map(urls_df$file
-               , safe_nc
-               , proxy = TRUE
-               ) %>%
+                    , safe_nc
+                    , proxy = TRUE
+                    ) %>%
       purrr::map("result") %>%
       purrr::discard(is.null)
     
-    if(length(r) > 0) {
+    if(length(r)) {
     
       r %>%
-        purrr::map(sf::st_set_crs, 4283) %>%
-        purrr::map(.
-                   , ~ .[sf::st_bbox(base) %>%
-                           sf::st_as_sfc() %>%
-                           sf::st_transform(crs = 4283)
-                         ]
+        purrr::map(sf::st_set_crs, settings$epsg_latlong) %>%
+        purrr::map(`[`
+                   , i = base
                    ) %>%
         purrr::map(stars::st_as_stars
                    , proxy = FALSE
                    ) %>%
         do.call("c", .) %>%
-        aggregate(by = "3 months", FUN = func) %>%
+        aggregate(by = "3 months"
+                  , FUN = get(func)
+                  , na.rm = TRUE
+                  ) %>%
         stars::write_stars(out_file)
       
     }
@@ -92,7 +100,7 @@
     tidyr::nest(data = -c(year, season, layer, func)) %>%
     dplyr::left_join(settings[["seasons", exact = TRUE]]$season) %>%
     #dplyr::sample_n(1) %>% # TESTING
-    dplyr::mutate(out_file = fs::path(settings[["cli_save_dir", exact = TRUE]]
+    dplyr::mutate(out_file = fs::path(settings[["cli_cube_dir", exact = TRUE]]
                                       , paste0(layer, "__", start_date,".tif")
                                       )
                   , done = file.exists(out_file)
@@ -104,13 +112,13 @@
                     , files$func[!files$done]
                     )
                , make_cli_data
-               , base = settings$base_grid
+               , base = settings$aoi
                )
   
   
   # results-------
   
-  results <- fs::dir_info(settings[["cli_save_dir", exact = TRUE]]
+  results <- fs::dir_info(settings[["cli_cube_dir", exact = TRUE]]
                           , regexp = "tif$"
                           ) %>%
     dplyr::arrange(desc(modification_time)) %>%
@@ -124,4 +132,14 @@
                     ) %>%
     dplyr::mutate(start_date = as.Date(start_date))
   
+  
+  if(FALSE) {
+    
+    results %>%
+      dplyr::sample_n(9) %>%
+      dplyr::pull(path) %>%
+      terra::rast() %>%
+      plot()
+    
+  }
   

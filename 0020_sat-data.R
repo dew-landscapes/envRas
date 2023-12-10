@@ -1,7 +1,7 @@
 
   # get data-------
   
-  fs::dir_create(settings[["sat_save_dir", exact = TRUE]])
+  fs::dir_create(settings[["sat_cube_dir", exact = TRUE]])
   
   safe_sat <- purrr::safely(make_sat_data)
   
@@ -15,7 +15,7 @@
   
   # results-------
   
-  results <- fs::dir_info(settings[["sat_save_dir", exact = TRUE]]
+  results <- fs::dir_info(settings[["sat_cube_dir", exact = TRUE]]
                           , regexp = "tif$"
                           ) %>%
     dplyr::arrange(desc(modification_time)) %>%

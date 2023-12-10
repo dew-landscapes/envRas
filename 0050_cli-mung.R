@@ -35,7 +35,7 @@
   
   qs <- c(0.05, 0.50, 0.95)
   
-  fs::dir_create(settings[["munged_dir)", exact = TRUE]]
+  fs::dir_create(settings[["munged_dir", exact = TRUE]])
   
   align_func <- function(stack, out_file, base, ...) {
     
@@ -63,7 +63,7 @@
   purrr::walk2(epoch_seasons$stack[!epoch_seasons$done]
                , epoch_seasons$out_file[!epoch_seasons$done]
                , align_func
-               , base = settings[["base_grid", exact = TRUE]]
+               , base = terra::rast(fs::dir_ls(settings$munged_dir)[[1]])
                , na.rm = TRUE
                , probs = qs
                )

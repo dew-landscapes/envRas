@@ -19,7 +19,7 @@
   
   settings$layer <- "sa_ibrasub_xn"
   settings$filt_col <- NULL
-  settings$use_aoi <- "sa_ibrasub_xn"
+  settings$use_aoi <- NULL
   settings$use_bbox <- FALSE
   settings$use_buffer <- 0
   settings$use_clip <- NULL
@@ -32,7 +32,7 @@
   #----------RUN---------
   
   if(!exists("run_from")) run_from <- 0
-  if(!exists("run_to")) run_to <- 50
+  if(!exists("run_to")) run_to <- 30
   
   # skips <- "sat"
   

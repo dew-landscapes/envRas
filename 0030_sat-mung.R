@@ -39,13 +39,13 @@
   
   purrr::walk2(epoch_seasons$stack[!epoch_seasons$done]
                , epoch_seasons$out_file[!epoch_seasons$done]
-               , ~terra::app(.x
-                             , fun = quantile
-                             , na.rm = TRUE
-                             , probs = qs
-                             , filename = .y
-                             , overwrite = TRUE
-                             , cores = max_cores
-                             )
+               , ~ terra::app(.x
+                              , fun = quantile
+                              , na.rm = TRUE
+                              , probs = qs
+                              , filename = .y
+                              , overwrite = TRUE
+                              , cores = max_cores
+                              )
                )
   

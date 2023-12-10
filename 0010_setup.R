@@ -92,22 +92,21 @@
                        , "data"
                        )
   
-  settings$sat_save_dir <- fs::path(data_dir
-                                    , "raster"
+  settings$sat_cube_dir <- fs::path("G:"
                                     , paste0("cube"
                                              , "__"
                                              , settings[["use_period", exact = TRUE]]
                                              )
                                     , paste(settings[["sat_source", exact = TRUE]]
                                             , paste(settings[["sat_collection", exact = TRUE]], collapse = "--")
+                                            , settings[["layer", exact = TRUE]]
                                             , settings[["use_aoi", exact = TRUE]]
                                             , settings[["use_buffer", exact = TRUE]]
-                                            , settings[["use_res", exact = TRUE]]
                                             , sep = "__"
                                             )
                                     )
   
-  settings$cli_save_dir <- fs::path(data_dir
+  settings$cli_cube_dir <- fs::path(data_dir
                                     , "raster"
                                     , paste0("cube"
                                              , "__"
@@ -115,24 +114,25 @@
                                              )
                                     , paste(settings[["cli_source", exact = TRUE]]
                                             , paste(settings[["cli_collection", exact = TRUE]], collapse = "--")
+                                            , settings[["layer", exact = TRUE]]
                                             , settings[["use_aoi", exact = TRUE]]
                                             , settings[["use_buffer", exact = TRUE]]
-                                            , settings[["use_res", exact = TRUE]]
                                             , sep = "__"
                                             )
                                     )
   
   settings$munged_dir <- fs::path("D:"
-                         , "env"
-                         , "data"
-                         , "raster"
-                         , "aligned"
-                         , paste(settings[["use_aoi", exact = TRUE]]
-                                 , settings[["use_buffer", exact = TRUE]]
-                                 , settings[["use_res", exact = TRUE]]
-                                 , sep = "__"
-                                 )
-                         )
+                                  , "env"
+                                  , "data"
+                                  , "raster"
+                                  , "aligned"
+                                  , paste(settings[["layer", exact = TRUE]]
+                                          , settings[["use_aoi", exact = TRUE]]
+                                          , settings[["use_buffer", exact = TRUE]]
+                                          , settings[["use_res", exact = TRUE]]
+                                          , sep = "__"
+                                          )
+                                  )
   
   fs::dir_create(settings[["munged_dir", exact = TRUE]])
   
@@ -156,34 +156,36 @@
                                   )
     
   settings$boundary <- make_aoi(layer = lay
-                           , filt_col = settings[["filt_col", exact = TRUE]]
-                           , level = settings[["use_aoi", exact = TRUE]]
-                           , buffer = settings[["use_buffer", exact = TRUE]]
-                           , bbox = settings[["use_bbox", exact = TRUE]]
-                           , clip = settings[["use_clip", exact = TRUE]]
-                           , clip_buf = settings[["use_clip_buffer", exact = TRUE]]
-                           )
+                                , filt_col = settings[["filt_col", exact = TRUE]]
+                                , level = settings[["use_aoi", exact = TRUE]]
+                                , buffer = settings[["use_buffer", exact = TRUE]]
+                                , bbox = settings[["use_bbox", exact = TRUE]]
+                                , clip = settings[["use_clip", exact = TRUE]]
+                                , clip_buf = settings[["use_clip_buffer", exact = TRUE]]
+                                )
   
   if(FALSE) tmap::tm_shape(settings[["boundary", exact = TRUE]]) + tmap::tm_polygons()
   
   
+  # base grid ---------
+  
+  # If base does not exist, make a raster to extent, resolution etc.
+  settings$base <- terra::rast(fs::path(settings$munged_dir, "base.tif"))
+  
+  
   # bboxes-------
+    
+  # projected
+  settings$bbox_use_epsg <- sf::st_bbox(settings$base)
+
+  settings$use_extent <- list(left = settings[["bbox_use_epsg", exact = TRUE]]["xmin"][[1]]
+                              , right = settings[["bbox_use_epsg", exact = TRUE]]["xmax"][[1]]
+                              , top = settings[["bbox_use_epsg", exact = TRUE]]["ymax"][[1]]
+                              , bottom = settings[["bbox_use_epsg", exact = TRUE]]["ymin"][[1]]
+                              )
   
   # geographic
   settings$bbox <- sf::st_bbox(settings[["boundary", exact = TRUE]])
-    
-  # projected
-  settings$bbox_use_epsg <- settings[["boundary", exact = TRUE]] %>%
-    sf::st_transform(crs = settings[["epsg_proj", exact = TRUE]]) %>%
-    sf::st_bbox()
-
-  bbox_adj <- settings[["use_res", exact = TRUE]] * ceiling(100 / settings$use_res)
-  
-  settings$use_extent <- list(left = round(floor(settings[["bbox_use_epsg", exact = TRUE]]["xmin"][[1]]), -2) - bbox_adj
-                              , right = round(ceiling(settings[["bbox_use_epsg", exact = TRUE]]["xmax"][[1]]), -2) + bbox_adj
-                              , top = round(ceiling(settings[["bbox_use_epsg", exact = TRUE]]["ymax"][[1]]), -2) + bbox_adj
-                              , bottom = round(floor(settings[["bbox_use_epsg", exact = TRUE]]["ymin"][[1]]), -2) - bbox_adj
-                              )
   
   
   # save-------
