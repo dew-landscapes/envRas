@@ -31,10 +31,12 @@
   
   #----------RUN---------
   
-  if(!exists("run_from")) run_from <- 0
-  if(!exists("run_to")) run_to <- 30
+  max_cores <- 10
   
-  # skips <- "sat"
+  if(!exists("run_from")) run_from <- 0
+  if(!exists("run_to")) run_to <- 50
+  
+  skips <- "sat"
   
   dir() %>%
     grep("^\\d{4}_.*\\.R$",.,value=TRUE) %>%

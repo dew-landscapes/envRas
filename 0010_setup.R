@@ -2,7 +2,7 @@
   
   # max_cores-----
   
-  max_cores <- 15
+  use_cores <- if(parallel::detectCores() < max_cores) parallel::detectCores() - 1 else max_cores
   
 
   # packages------
@@ -34,6 +34,7 @@
           , "sf"
           , "tmap"
           , "tidyterra"
+          , "sfarrow"
           
           # env
           , "envRaster"
@@ -87,12 +88,15 @@
   
   # directories------
   
-  data_dir <- fs::path("D:"
+  data_dir <- fs::path("R:"
+                       , "IST"
+                       , "DEHProjects"
+                       , "Landscapes"
                        , "env"
                        , "data"
                        )
   
-  settings$sat_cube_dir <- fs::path("G:"
+  settings$sat_cube_dir <- fs::path("H:/"
                                     , paste0("cube"
                                              , "__"
                                              , settings[["use_period", exact = TRUE]]
@@ -105,7 +109,7 @@
                                             , sep = "__"
                                             )
                                     )
-  
+
   settings$cli_cube_dir <- fs::path(data_dir
                                     , "raster"
                                     , paste0("cube"
@@ -121,9 +125,7 @@
                                             )
                                     )
   
-  settings$munged_dir <- fs::path("D:"
-                                  , "env"
-                                  , "data"
+  settings$munged_dir <- fs::path(data_dir
                                   , "raster"
                                   , "aligned"
                                   , paste(settings[["layer", exact = TRUE]]
