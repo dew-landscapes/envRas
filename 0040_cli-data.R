@@ -2,13 +2,8 @@
   # base grid------
   # base grid using settings$aoi and settings$boundary
   
-  temp <- settings[["sat_cube_dir", exact = TRUE]] %>%
-    fs::dir_ls(regexp = "tif$") %>%
-    `[`(1) %>%
-    terra::rast()
-  
-  settings[["aoi"]] <- terra::rast(ext(temp)
-                                   , crs = terra::crs(temp)
+  settings[["aoi"]] <- terra::rast(ext(settings[["base", exact = TRUE]])
+                                   , crs = terra::crs(settings[["base", exact = TRUE]])
                                    ) %>%
     terra::project(y = paste0("epsg:", settings$epsg_latlong)) %>%
     stars::st_as_stars()

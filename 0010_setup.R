@@ -2,7 +2,7 @@
   
   # max_cores-----
   
-  max_cores <- 15
+  max_cores <- 2
   
 
   # packages------
@@ -87,24 +87,27 @@
   
   # directories------
   
-  data_dir <- fs::path("D:"
-                       , "env"
+  data_dir <- fs::path("H:"
                        , "data"
                        )
   
-  settings$sat_cube_dir <- fs::path("G:"
-                                    , paste0("cube"
-                                             , "__"
-                                             , settings[["use_period", exact = TRUE]]
-                                             )
-                                    , paste(settings[["sat_source", exact = TRUE]]
-                                            , paste(settings[["sat_collection", exact = TRUE]], collapse = "--")
-                                            , settings[["layer", exact = TRUE]]
-                                            , settings[["use_aoi", exact = TRUE]]
-                                            , settings[["use_buffer", exact = TRUE]]
-                                            , sep = "__"
-                                            )
-                                    )
+  if(dir.exists("I:/")) {
+    
+    settings$sat_cube_dir <- fs::path("I:"
+                                      , paste0("cube"
+                                               , "__"
+                                               , settings[["use_period", exact = TRUE]]
+                                               )
+                                      , paste(settings[["sat_source", exact = TRUE]]
+                                              , paste(settings[["sat_collection", exact = TRUE]], collapse = "--")
+                                              , settings[["layer", exact = TRUE]]
+                                              , settings[["use_aoi", exact = TRUE]]
+                                              , settings[["use_buffer", exact = TRUE]]
+                                              , sep = "__"
+                                              )
+                                      )
+    
+  }
   
   settings$cli_cube_dir <- fs::path(data_dir
                                     , "raster"
@@ -121,9 +124,7 @@
                                             )
                                     )
   
-  settings$munged_dir <- fs::path("D:"
-                                  , "env"
-                                  , "data"
+  settings$munged_dir <- fs::path(data_dir
                                   , "raster"
                                   , "aligned"
                                   , paste(settings[["layer", exact = TRUE]]
