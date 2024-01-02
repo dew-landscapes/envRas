@@ -45,7 +45,7 @@
                               , probs = qs
                               , filename = .y
                               , overwrite = TRUE
-                              , cores = max_cores
+                              , cores = use_cores
                               )
                )
   

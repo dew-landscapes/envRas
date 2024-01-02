@@ -34,6 +34,8 @@
   if(!exists("run_from")) run_from <- 0
   if(!exists("run_to")) run_to <- 10
   
+  max_cores <- 10
+  
   skips <- "sat"
   
   dir() %>%
