@@ -22,11 +22,6 @@
 
   fs::dir_create(settings[["cli_cube_dir", exact = TRUE]])
   
-  
-  library(ncdf4)
-  library(lubridate)
-  library(stars)
-  
   base_url <- "https://dapds00.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"
   
   get_layers <- tibble::tribble(
@@ -131,7 +126,7 @@
   if(FALSE) {
     
     results %>%
-      dplyr::sample_n(9) %>%
+      dplyr::sample_n(6) %>%
       dplyr::pull(path) %>%
       terra::rast() %>%
       plot()

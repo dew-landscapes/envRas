@@ -31,19 +31,16 @@
                                         , paste0(out_file, ".tif")
                                         )
                   , done = file.exists(out_file)
-                  )
-  
-  qs <- c(0.05, 0.50, 0.95)
+                  ) %>%
+    dplyr::left_join(get_layers)
   
   fs::dir_create(settings[["munged_dir", exact = TRUE]])
   
-  align_func <- function(stack, out_file, base, ...) {
+  align_func <- function(stack, out_file, func, base, ...) {
     
     reproj <- stack %>%
-      terra::app(fun = quantile
+      terra::app(fun = func
                  , ...
-                 # , na.rm = TRUE
-                 # , probs = qs
                  ) %>%
       terra::project(terra::crs(base))
     
@@ -58,13 +55,46 @@
     
     return(invisible(NULL))
     
+    
+    if(FALSE) {
+      
+      if(is.character(base)) base <- base %>% stars::read_stars()
+      if("SpatRaster" %in% class(base)) base <- terra::sources(base)[[1]] %>% stars::read_stars()
+      
+      dates <- names(stack)
+      
+      stack %>%
+        stars::st_as_stars(proxy = TRUE) %>%
+        stars::st_set_dimensions(3, values = dates, names = "date")
+        stars::st_as_stars(proxy = TRUE
+                           , along = time
+                           ) %>%
+        aggregate(by = "10 years"
+                  , FUN = get(func)
+                  , na.rm = TRUE
+                  ) %>%
+        stars::st_warp(dest = base
+                       , method = "bilinear"
+                       , use_gdal = TRUE
+                       , no_data_value = -Inf
+                       ) %>%
+        stars::write_stars(out_file)
+      
+      return(invisible(NULL))
+        
+    }
+    
   }
   
-  purrr::walk2(epoch_seasons$stack[!epoch_seasons$done]
-               , epoch_seasons$out_file[!epoch_seasons$done]
-               , align_func
-               , base = terra::rast(fs::dir_ls(settings$munged_dir)[[1]])
-               , na.rm = TRUE
-               , probs = qs
+  purrr::pwalk(list(epoch_seasons$stack[!epoch_seasons$done]
+                    , epoch_seasons$out_file[!epoch_seasons$done]
+                    , epoch_seasons$func[!epoch_seasons$done]
+                    )
+               , function(a, b, c) align_func(stack = a
+                                              , out_file = b
+                                              , func = c
+                                              , base = settings$base
+                                              , na.rm = TRUE
+                                              )
                )
   

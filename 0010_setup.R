@@ -24,6 +24,7 @@
           , "lubridate"
           
           # misc
+          , "rio"
           , "fs"
           , "ggridges"
           
@@ -35,6 +36,8 @@
           , "tmap"
           , "tidyterra"
           , "sfarrow"
+          , "ncmeta"
+          , "ncdf4"
           
           # env
           , "envRaster"
@@ -110,11 +113,7 @@
     
   }
   
-  data_dir <- fs::path("R:"
-                       , "IST"
-                       , "DEHProjects"
-                       , "Landscapes"
-                       , "env"
+  data_dir <- fs::path("H:"
                        , "data"
                        )
 
