@@ -33,19 +33,13 @@
                   , done = file.exists(out_file)
                   )
   
-  qs <- c(0.05, 0.50, 0.95)
-  
-  fs::dir_create(settings[["munged_dir", exact = TRUE]])
-  
   purrr::walk2(epoch_seasons$stack[!epoch_seasons$done]
                , epoch_seasons$out_file[!epoch_seasons$done]
                , ~ terra::app(.x
-                              , fun = quantile
+                              , fun = median
                               , na.rm = TRUE
-                              , probs = qs
                               , filename = .y
                               , overwrite = TRUE
-                              , cores = use_cores
                               )
                )
   

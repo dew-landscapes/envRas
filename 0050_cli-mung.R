@@ -27,7 +27,7 @@
     dplyr::mutate(stack = purrr::map(data
                                      , ~ terra::rast(.$path)
                                      )
-                  , out_file = fs::path(settings[["munged_dir", exact = TRUE]]
+                  , out_file = fs::path(gsub("30$", "blah", settings[["munged_dir", exact = TRUE]])
                                         , paste0(out_file, ".tif")
                                         )
                   , done = file.exists(out_file)
@@ -36,56 +36,6 @@
   
   fs::dir_create(settings[["munged_dir", exact = TRUE]])
   
-  align_func <- function(stack, out_file, func, base, ...) {
-    
-    reproj <- stack %>%
-      terra::app(fun = func
-                 , ...
-                 ) %>%
-      terra::project(terra::crs(base))
-    
-    ratio <- terra::res(reproj) / terra::res(base)
-    
-    reproj %>%
-      terra::disagg(ratio) %>%
-      terra::project(base) %>%
-      terra::writeRaster(out_file
-                         , overwrite = FALSE
-                         )
-    
-    return(invisible(NULL))
-    
-    
-    if(FALSE) {
-      
-      if(is.character(base)) base <- base %>% stars::read_stars()
-      if("SpatRaster" %in% class(base)) base <- terra::sources(base)[[1]] %>% stars::read_stars()
-      
-      dates <- names(stack)
-      
-      stack %>%
-        stars::st_as_stars(proxy = TRUE) %>%
-        stars::st_set_dimensions(3, values = dates, names = "date")
-        stars::st_as_stars(proxy = TRUE
-                           , along = time
-                           ) %>%
-        aggregate(by = "10 years"
-                  , FUN = get(func)
-                  , na.rm = TRUE
-                  ) %>%
-        stars::st_warp(dest = base
-                       , method = "bilinear"
-                       , use_gdal = TRUE
-                       , no_data_value = -Inf
-                       ) %>%
-        stars::write_stars(out_file)
-      
-      return(invisible(NULL))
-        
-    }
-    
-  }
-  
   purrr::pwalk(list(epoch_seasons$stack[!epoch_seasons$done]
                     , epoch_seasons$out_file[!epoch_seasons$done]
                     , epoch_seasons$func[!epoch_seasons$done]
@@ -93,7 +43,7 @@
                , function(a, b, c) align_func(stack = a
                                               , out_file = b
                                               , func = c
-                                              , base = settings$base
+                                              , base = epoch_seasons$stack[[1]][[1]]
                                               , na.rm = TRUE
                                               )
                )

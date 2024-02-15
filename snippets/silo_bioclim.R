@@ -3,7 +3,7 @@ library(dismo)
 library(pbapply)
 library(parallel)
 
-prec <- list.files("../../data/raster/silo/",
+prec <- list.files("H:/data/raster/silo/",
                    full.names = TRUE, 
                    pattern = "monthly_rain"
                    )

@@ -3,7 +3,7 @@
                             , end_date = "2020-02-29"
                             , settings = list(use_epsg = 7845
                                               , use_res = 30
-                                              , sat_source = "DEA"
+                                              , sat_source = "https://explorer.sandbox.dea.ga.gov.au/stac"
                                               , sat_collection = "ga_ls8c_ard_3"
                                               , use_period = "P3M"
                                               , sat_cube_dir = "temp"
@@ -40,7 +40,7 @@
     
     while(!any(length(items), counter > 10)) {
       
-      items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
+      items <- rstac::stac(settings[["sat_source", exact = TRUE]]) %>%
         rstac::stac_search(collections = settings[["sat_collection", exact = TRUE]]
                            , bbox = settings[["bbox", exact = TRUE]]
                            , datetime = paste0(as.character(start_date)
@@ -77,15 +77,15 @@
       # cube setup------
       
       v_num <- gdalcubes::cube_view(srs = paste0("EPSG:"
-                                             , settings[["epsg_proj", exact = TRUE]]
-                                             )
-                                , extent = use_extent
-                                , dx = settings[["use_res", exact = TRUE]] #ceiling(abs(use_extent$left - use_extent$right) / 30)
-                                , dy = settings[["use_res", exact = TRUE]] #ceiling(abs(use_extent$top - use_extent$bottom) / 30)
-                                , dt = settings[["use_period", exact = TRUE]]
-                                , aggregation = "median"
-                                , resampling = "bilinear"
-                                )
+                                                 , settings[["epsg_proj", exact = TRUE]]
+                                                 )
+                                    , extent = use_extent
+                                    , dx = settings[["use_res", exact = TRUE]] #ceiling(abs(use_extent$left - use_extent$right) / 30)
+                                    , dy = settings[["use_res", exact = TRUE]] #ceiling(abs(use_extent$top - use_extent$bottom) / 30)
+                                    , dt = settings[["use_period", exact = TRUE]]
+                                    , aggregation = "median"
+                                    , resampling = "bilinear"
+                                    )
       
       v_cat <- v_num %>%
         gdalcubes::cube_view(aggregation = "max"
