@@ -13,10 +13,14 @@
                    , gsub("\\s", "_", names(geo))
                    )
   
-  purrr::walk(names(geo)
-              , \(x) terra::writeRaster(geo[[x]]
-                                        , filename = gsub("_old", "", terra::sources(geo[[x]]))
-                                        )
+  file_names <- gsub("\\s", "_", terra::sources(geo)) |>
+    gsub("_old", "", x = _)
+  
+  purrr::walk2(names(geo)
+               , file_names
+              , \(x, y) terra::writeRaster(geo[[x]]
+                                           , filename = y
+                                           )
               )
 
 

@@ -1,38 +1,36 @@
 
-  orig_dir <- gsub("cube__P3M", "cube__P3M_tofix", settings$sat_cube_dir)
-  #orig_dir <- fs::path(data_dir, "raster", "cube__P3M", basename(settings$sat_cube_dir))
- 
-  already_done <- dir_ls(orig_dir) %>%
+  # setup -------
+  problem_dir <- fs::path(gsub("30", "90", settings$munged_dir))
+  
+  dir_create(fs::path(problem_dir, "to_fix"))
+  
+  indices <- c("gdvi", "ndvi", "nbr", "nbr2")
+
+  to_fix <- fs::dir_ls(problem_dir) %>%
     tibble::enframe(name = NULL, value = "path") %>%
-    parse_env_tif() %>%
-    dplyr::mutate(out_file = fs::path(settings$sat_cube_dir, basename(path))
-                  , raw_band = ! band %in% c("gdvi", "ndvi", "nbr", "nbr2")
-                  , indice = band %in% c("gdvi", "ndvi", "nbr", "nbr2")
-                  , done = file.exists(out_file)
-                  , todo_band = as.logical(raw_band * !done)
-                  , todo_indice = as.logical(indice * !done)
+    parse_env_tif(cube = FALSE) %>%
+    dplyr::mutate(temp_file = fs::path(problem_dir, "to_fix", basename(path))
+                  , mult = dplyr::case_when(band %in% indices & source == "DEA" ~ 1
+                                            , !band %in% indices & source == "DEA" ~ 1
+                                            , source == "NCI" ~ 10
+                                            )
+                  , type = dplyr::case_when(band %in% indices & source == "DEA" ~ "INT2S"
+                                            , !band %in% indices & source == "DEA" ~ "INT2U"
+                                            , source == "NCI" ~ "INT2S"
+                                            )
                   )
   
+  # move problem files --------
+  fs::file_move(to_fix$path, to_fix$temp_file)
   
-  # Bands -------
-  purrr::walk2(already_done$path[already_done$todo_band]
-               , already_done$out_file[already_done$todo_band]
-               , ~ terra::writeRaster(x = terra::rast(.x)
-                                      , filename = .y
-                                      , wopt = list(datatype = "INT2U"
-                                                    , gdal = c("COMPRESS = NONE")
-                                                    )
-                                      )
-               )
+  # fix  --------
   
-  # Indices --------
-  
-  process_and_save <- function(in_ras, out_ras) {
+  process_and_save <- function(in_ras, out_ras, mult, type) {
     
-    writeRaster(terra::rast(in_ras) * 10000
-                , out_ras
+    writeRaster(x = terra::rast(in_ras) * mult
+                , filename = out_ras
                 , overwrite = TRUE
-                , datatype = "INT2S"
+                , datatype = type
                 , gdal = c("COMPRESS = NONE")
                 )
     
@@ -40,15 +38,18 @@
     
   }
   
-  purrr::walk2(already_done$path[already_done$todo_indice]
-               , already_done$out_file[already_done$todo_indice]
+  purrr::pwalk(list(to_fix$temp_file
+                    , to_fix$path
+                    , to_fix$mult
+                    , to_fix$type
+                    )
                , process_and_save
                )
   
   
   if(FALSE) {
     
-    already_done$out_file[already_done$done] %>% terra::rast() %>% plot()
+    to_fix$path[24] %>% terra::rast() %>% plot()
     
     
   }
