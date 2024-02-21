@@ -58,8 +58,10 @@
   
   # functions------
   
+  safe_source <- purrr::safely(source)
+  
   purrr::walk(fs::dir_ls("function")
-              , source
+              , safe_source
               )
   
   
@@ -116,6 +118,21 @@
   data_dir <- fs::path("H:"
                        , "data"
                        )
+  
+  settings$lc_cube_dir <- fs::path(data_dir
+                                   , "raster"
+                                   , paste0("cube"
+                                            , "__"
+                                            , "P1Y"
+                                            )
+                                   , paste(settings[["lc_source", exact = TRUE]]
+                                            , paste(settings[["lc_collection", exact = TRUE]], collapse = "--")
+                                            , settings[["layer", exact = TRUE]]
+                                            , settings[["use_aoi", exact = TRUE]]
+                                            , settings[["use_buffer", exact = TRUE]]
+                                            , sep = "__"
+                                            )
+                                   )
 
   settings$cli_cube_dir <- fs::path(data_dir
                                     , "raster"

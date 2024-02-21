@@ -1,31 +1,19 @@
-  
-  make_sat_data <- function(start_date = "2019-12-01"
-                            , end_date = "2020-02-29"
+  make_lc_data <- function(start_date = "2014-01-01"
+                            , end_date = "2023-12-31"
                             , settings = list(use_epsg = 7845
                                               , use_res = 30
-                                              , sat_source = "https://explorer.sandbox.dea.ga.gov.au/stac"
-                                              , sat_collection = "ga_ls8c_ard_3"
-                                              , use_period = "P3M"
-                                              , sat_cube_dir = "temp"
+                                              , lc_source = "https://explorer.sandbox.dea.ga.gov.au/stac"
+                                              , lc_collection = "ga_ls_landcover_class_cyear_2"
+                                              , use_period = "P1Y"
+                                              , lc_cube_dir = "temp"
                                               , bbox = c(xmin = 138.75
                                                          , ymin = -35.45
                                                          , xmax = 138.85
                                                          , ymax = -35.55
                                                          )
-                                            )
+                                              )
                             , force_new = FALSE
-                            , bands = c("blue", "red", "green"
-                                        , "swir_1", "swir_2", "coastal_aerosol"
-                                        , "nir"
-                                        )
-                            , indices = list(gdvi = c("green", "nir")
-                                             , ndvi = c("nir", "red")
-                                             , nbr = c("nir", "swir_1")
-                                             , nbr2 = c("nir", "swir_2")
-                                             )
-                            , mask = list(band = "oa_fmask"
-                                          , mask = c(2, 3)
-                                          )
+                            , bands = c("level4")
                             , return_stack = FALSE
                             , ... # passed to gdalcubes::stac_image_collection
                             ) {
@@ -41,8 +29,8 @@
     
     while(!any(length(items), counter > 10)) {
       
-      items <- rstac::stac(settings[["sat_source", exact = TRUE]]) %>%
-        rstac::stac_search(collections = settings[["sat_collection", exact = TRUE]]
+      items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
+        rstac::stac_search(collections = settings[["lc_collection", exact = TRUE]]
                            , bbox = settings[["bbox", exact = TRUE]]
                            , datetime = paste0(as.character(start_date)
                                                , "/"
@@ -109,7 +97,7 @@
                     
                     message(x)
                     
-                    out_file <- fs::path(settings[["sat_cube_dir", exact = TRUE]]
+                    out_file <- fs::path(settings[["lc_cube_dir", exact = TRUE]]
                                          , paste0(gsub("nbart_", "", x), "__", start_date, ".tif")
                                          )
                     
@@ -131,7 +119,7 @@
                                                )
                       
                       gdalcubes::write_tif(r
-                                           , dir = settings[["sat_cube_dir", exact = TRUE]]
+                                           , dir = settings[["lc_cube_dir", exact = TRUE]]
                                            , prefix = paste0(gsub("nbart_", "", x), "__")
                                            , pack = list(type = "uint16"
                                                          , scale = 1
@@ -156,7 +144,7 @@
                      
                      message(.y)
                      
-                     out_file <- fs::path(settings[["sat_cube_dir", exact = TRUE]]
+                     out_file <- fs::path(settings[["lc_cube_dir", exact = TRUE]]
                                           , paste0(.y, "__", start_date, ".tif")
                                           )
                      
@@ -195,7 +183,7 @@
                                                 )
                        
                        gdalcubes::write_tif(r
-                                            , dir = settings[["sat_cube_dir", exact = TRUE]]
+                                            , dir = settings[["lc_cube_dir", exact = TRUE]]
                                             , prefix = paste0(.y, "__")
                                             , pack = list(type = "int16"
                                                           , scale = 1
@@ -215,7 +203,7 @@
         
         # stack------
         
-        stack <- fs::dir_info(settings[["sat_cube_dir", exact = TRUE]]
+        stack <- fs::dir_info(settings[["lc_cube_dir", exact = TRUE]]
                               , regexp = "tif$"
                               ) %>%
           dplyr::filter(grepl(paste0(c(gsub("nbart_", "", bands)
@@ -249,4 +237,3 @@
     if(exists("stack")) return(stack) else return(invisible(NULL))
     
   }
-  

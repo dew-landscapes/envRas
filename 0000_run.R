@@ -15,6 +15,9 @@
   settings$cli_source <- "NCI"
   settings$cli_collection <- "ANUClimate"
   
+  settings$lc_source <- "DEA"
+  settings$lc_collection <- "ga_ls_landcover_class_cyear_2"
+  
   settings$use_period <- "P3M"
   
   settings$layer <- "sa_ibrasub_xn"
@@ -31,18 +34,18 @@
   
   #----------RUN---------
   
-  if(!exists("run_from")) run_from <- 0
-  if(!exists("run_to")) run_to <- 10
+  run_from <- 0
+  run_to <- 10
   
   max_cores <- 20
   
-  # skips <- "sat"
+  skips <- c("sat", "cli")
   
   dir() %>%
     grep("^\\d{4}_.*\\.R$",.,value=TRUE) %>%
     setNames(stringr::str_extract(.,"\\d{4}")) %>%
     `[` (names(.)[as.numeric(names(.)) <= run_to & as.numeric(names(.)) >= if(run_from == 0) 1 else run_from]) %>%
-    {if(exists("skips")) (.) %>% `[` (!grepl(skips, .)) else (.) } %>%
+    {if(exists("skips")) (.) %>% `[` (!grepl(paste0(skips, collapse = "|"), .)) else (.) } %>%
     purrr::walk(source
                 , verbose = TRUE
                 )

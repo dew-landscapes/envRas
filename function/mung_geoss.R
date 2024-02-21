@@ -47,7 +47,7 @@
     gc()
     
     # apply the names 
-    names(r) <- gsub("\\s", "_", names_r[,2])
+    names(r) <- gsub("\\s", "_", tolower(stringr::str_squish(names_r[,2])))
     
     gc()
     
@@ -65,9 +65,9 @@
     
     gc()
      
-    purrr::walk(names(r)
-                , \(x) terra::writeRaster(r[x]
-                                          , filename = paste0(out_path, "__", x, ".tif")
+    purrr::walk(1:nlyr(r)
+                , \(x) terra::writeRaster(r[[x]]
+                                          , filename = paste0(out_path, "__", names(r)[x], ".tif")
                                           )
                 )
      

@@ -1,0 +1,24 @@
+Common name,ISO class descriptor,Class,R,G,B
+No Data,No Data,0,0,0,0
+Mines and Quarries,Extraction Sites,1,130,130,130
+Urban areas,Urban Areas,35,200,200,200
+Lakes and dams,Inland Waterbodies,3,0,70,173
+Salt lakes,Salt Lakes,4,150,225,255
+Irrigated cropping,Irrigated Cropping,5,90,36,90
+Rain fed cropping,Rainfed Cropping,8,198,141,153
+Irrigated pasture,Irrigated Pasture,6,166,38,170
+Rain fed pasture,Rainfed Pasture,9,226,194,199
+Irrigated sugar,Irrigated Sugar,7,183,18,52
+Rain fed sugar,Rainfed Sugar,10,219,77,105
+Wetlands,Wetlands,11,0,178,160
+Alpine meadows,Alpine Grasses - Open,15,255,255,255
+Open Hummock Grassland,Hummock Grasses - Open,16,255,255,115
+Closed Tussock Grassland,Tussock Grasses - Closed,14,255,121,0
+Open Tussock Grassland,Tussock Grasses - Open,18,255,169,82
+Scattered shrubs and grasses,Shrubs and Grasses - Sparse-Scattered,19,255,255,190
+Dense Shrubland,Shrubs - Closed,24,175,136,80
+Open Shrubland,Shrubs - Open,25,193,168,117
+Closed Forest,Trees - Closed,31,0,133,0
+Open Forest,Trees - Open,32,20,194,0
+Woodland,Trees - Sparse,34,186,232,96
+Open Woodland,Trees - Scattered,33,214,255,138

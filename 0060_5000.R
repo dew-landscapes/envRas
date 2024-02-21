@@ -6,6 +6,8 @@
   silo_dir <- fs::path(data_dir, "raster", "silo")
   
   geoss_dir <- fs::path(data_dir, "raster", "GEOSS")
+  
+  lc_dir <- fs::path(data_dir, "raster", "DLCD")
 
   aligned_dir <- fs::path("H:"
                           , "data"
@@ -133,4 +135,36 @@
                , base = base
                )
     
+  
+  # landcover ---------
+  
+  # manual download from https://ecat.ga.gov.au/geonetwork/srv/eng/catalog.search#/metadata/83868
+  # put in data/raster/DLCD
+  
+  lc_source <- "DEA"
+  lc_collection <- "ga_ter_m_dlcd_ann"
+  
+  lc <- fs::dir_info(lc_dir
+                        , recurse = TRUE
+                        , regexp = "tif$"
+                        ) %>%
+    dplyr::mutate(att = basename(path)
+                  , year = lubridate::year(lubridate::ymd(stringr::str_extract(att, "-\\d{8}\\.")))
+                  , source = lc_source
+                  , collection = lc_collection
+                  , min_year = min(year)
+                  , max_year = max(year)
+                  , epoch = paste0(substr(min_year, 3, 4), "-", substr(max_year, 3, 4))
+                  ) %>%
+    dplyr::select(path, source, collection, epoch) %>%
+    dplyr::mutate(out_path = fs::path(aligned_dir
+                                      , paste(source, collection, 5000, epoch, "all", sep = "__")
+                                      )
+                  )
+  
+  mung_lc(lc$path
+          , unique(lc$out_path)
+          , aoi = sa_proj
+          , base = base
+          )
   

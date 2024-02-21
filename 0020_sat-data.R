@@ -10,6 +10,7 @@
                , safe_sat
                , settings = settings
                , force_new = F
+               , property_filter = function(x) {x[["eo:cloud_cover"]] < 50}
                )
   
   
