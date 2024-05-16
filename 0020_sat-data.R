@@ -1,33 +1,91 @@
 
-  # get data-------
+
+  # stacks ------
   
-  fs::dir_create(settings[["sat_cube_dir", exact = TRUE]])
+  sat_stacks <- stacks %>%
+    dplyr::filter(season %in% c("summer", "autumn"))
+
+  # check tifs ------
   
-  safe_sat <- purrr::safely(make_sat_data)
+  safe_rast <- purrr::safely(terra::rast)
+    
+  test_files <- fs::dir_ls(settings$sat_seas_cube_dir
+                           , regexp = "tif$"
+                           )
   
-  purrr::walk2(stacks$start_date
-               , stacks$end_date
-               , safe_sat
-               , settings = settings
-               , force_new = F
-               , property_filter = function(x) {x[["eo:cloud_cover"]] < 50}
+  tests <- purrr::map(test_files
+                      , safe_rast
+                      ) %>%
+    purrr::map("error") %>%
+    purrr::compact()
+    
+  if(length(tests)) {
+    
+    message("files: "
+            , tests
+            , " are being deleted"
+            )
+    
+    purrr::map(names(tests)[file.exists(names(tests))]
+               , unlink
+               , force = TRUE
                )
+    
+  }
   
   
-  # results-------
+  # make cube ------
   
-  results <- fs::dir_info(settings[["sat_cube_dir", exact = TRUE]]
-                          , regexp = "tif$"
-                          ) %>%
-    dplyr::arrange(desc(modification_time)) %>%
-    dplyr::mutate(name = gsub("\\.tif", "", basename(path))
-                  , name2 = basename(dirname(path))
-                  ) %>%
-    dplyr::select(path, name, name2) %>%
-    tidyr::separate(name, into = c("layer", "start_date"), sep = "__") %>%
-    tidyr::separate(name2,into = c("source", "collection", "aoi", "buffer", "res")
-                    , sep = "__"
-                    ) %>%
+  sat_sets <- c(settings[c("use_extent"
+                           , "epsg_proj"
+                           , "sat_collection"
+                           , "bbox"
+                           , "sat_res"
+                           , "period"
+                           )]
+                , out_dir = settings$sat_seas_cube_dir
+                )
+  
+  ## run? ------
+  
+  n_files <- nrow(sat_stacks) * (length(settings$sat_layers) + length(settings$sat_indices))
+  done_files <- length(fs::dir_ls(settings$sat_seas_cube_dir, regexp = "\\.tif$"))
+  run <- done_files < n_files
+  
+  safe_get_sat_data <- purrr::safely(get_sat_data)
+  
+  while(run) {
+    
+    message("expect ", n_files, " files in ", settings$sat_seas_cube_dir)
+  
+    ## run cube -----
+    purrr::pwalk(list(sat_stacks$start_date
+                      , sat_stacks$end_date
+                      , sat_stacks$season
+                      )
+                 , \(x, y, z) safe_get_sat_data(x
+                                                , y
+                                                , z
+                                                , sat_sets = sat_sets
+                                                , layers = settings$sat_layers
+                                                , indices = settings$sat_indices
+                                                
+                                                # dots
+                                                , property_filter = \(x) {x[["eo:cloud_cover"]] < 10}
+                                                )
+                 )
+    
+    run <- length(fs::dir_ls(settings$sat_seas_cube_dir, regexp = "\\.tif$")) < n_files
+    
+    Sys.sleep(30)
+    
+    message("run finished. All files done = ", !run)
+    
+  }
+  
+  
+  # cube results ------
+  results <- name_env_tif(settings[["sat_seas_cube_dir", exact = TRUE]], parse = TRUE) %>%
     dplyr::mutate(start_date = as.Date(start_date))
   
   if(FALSE) {
@@ -44,4 +102,75 @@
     
   }
   
+  # seasons --------
+   
+  indices <- names(settings$sat_indices)
   
+  epochs <- settings$epochs %>%
+    tidyr::unnest(cols = c(years)) %>%
+    dplyr::rename(year = years) %>%
+    dplyr::select(year, epoch) %>%
+    dplyr::left_join(settings[["seasons", exact = TRUE]]$seasons) %>%
+    dplyr::left_join(results) %>%
+    dplyr::filter(!is.na(path)) %>%
+    dplyr::mutate(scale = dplyr::case_when(layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = -1, max = 1)$scale
+                                            , !layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = 0, max = 10000)$scale
+                                            , TRUE ~ 1
+                                            )
+                  , offset = dplyr::case_when(layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = -1, max = 1)$offset
+                                            , !layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = 0, max = 10000)$offset
+                                            , TRUE ~ 0
+                                            )
+                  ) %>%
+    tidyr::nest(data = c(year, start_date, end_date, path)) %>%
+    dplyr::mutate(start_date = purrr::map_chr(data, \(x) as.character(min(x$start_date)))) %>%
+    name_env_tif() %>%
+    dplyr::mutate(out_file = fs::path("I:"
+                                      , gsub("P3M", "P10Y", out_file)
+                                      )
+                  ) %>%
+    dplyr::mutate(stack = purrr::map(data
+                                     , ~ terra::rast(.$path)
+                                     )
+                  , done = file.exists(out_file)
+                  )
+  
+  
+  # epochs------
+  
+  fs::dir_create(dirname(epochs$out_file))
+  
+  purrr::pwalk(list(epochs$stack[!epochs$done]
+                    , epochs$out_file[!epochs$done]
+                    , epochs$scale[!epochs$done]
+                    , epochs$offset[!epochs$done]
+                    )
+               , \(a, b, c, d) terra::app(a
+                                          , fun = "median"
+                                          , na.rm = TRUE
+                                          , filename = b
+                                          , overwrite = TRUE
+                                          , wopt = list(datatype = "INT2S"
+                                                        , scale = c
+                                                        , offset = d
+                                                        , gdal = c("COMPRESS=NONE")
+                                                        )
+                                          )
+               )
+  
+  if(FALSE) {
+    
+    # Test results
+    
+    temp <- epochs %>%
+      #dplyr::filter(grepl("count|water", path)) %>%
+      dplyr::slice(1:9) %>%
+      dplyr::mutate(r = purrr::map(out_file, \(x) terra::rast(x)))
+    
+    r <- terra::rast(temp$r)
+    
+    names(r) <- paste0(temp$layer)
+  
+    terra::plot(r)
+    
+  }

@@ -1,0 +1,43 @@
+# Introduction
+
+## Background
+
+This report documents the inputs, workflow and outputs of a scripted process to create analysis ready raster data. As an automated workflow, it can be applied to different areas, producing new spatial information relevant to those areas. In this report, an example area is used: "`r envFunc::vec_to_sentence(settings$level)`" but the workflow is used up to an extent greater than all of South Australia.
+
+## General methods
+
+### Area of interest
+
+Figure \@ref(fig:aoimap) shows the area of interest for this `r envFunc::vec_to_sentence(settings$level)` example area, in the context of the rest of the South Australia.
+
+<caption>(#fig:aoimap) Figure \@ref(fig:aoimap) `r envFunc::vec_to_sentence(settings$level)`</caption>
+
+```{r aoimap, results = "asis"}
+
+  # html cross referencing issue:
+    # https://github.com/glin/reactable/issues/15#issuecomment-560112306
+
+  use_bbox <- settings$boundary %>%
+    sf::st_buffer(100000) %>%
+    sf::st_bbox()
+
+  tm_shape(sa
+           , bbox = use_bbox
+           ) +
+    tm_borders() +
+  tm_shape(settings$boundary) +
+    tm_borders(col = "red")
+
+```
+
+
+### Scripting
+
+The data analysis and report writing were done in via a scripted workflow using the programs 'R' and 'R-studio'. [R](https://www.r-project.org/) `r cite_package("base")` is a free software environment for statistical computing and graphics. R can be extended via a range of packages that enable specific tasks or analyses. The packages used to produce this report are listed in Appendix Table \@ref(tab:packages). [R-studio](https://www.rstudio.com/) provides a range of user-friendly features to facilitate interaction with R.
+
+All code is stored in a version control system at [`r basename(here::here())`](%60r%20repo_link%60) (repository is currently private, so link will probably not work).
+
+Several packages were created to facilitate this workflow:
+
+* `r bib2df::bib2df(here::here("report", "packages.bib")) %>% dplyr::filter(grepl("^R-env", BIBTEXKEY)) %>% dplyr::select(BIBTEXKEY,TITLE) %>% dplyr::pull(TITLE) %>% paste0(collapse = "\n* ")`
+

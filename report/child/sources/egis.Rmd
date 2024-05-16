@@ -1,0 +1,5 @@
+### EGIS
+
+The flora and fauna [supertables](https://data.environment.sa.gov.au/Content/Publications/bdbsa-supertable-overview-fact.pdf), part of the environmental databases of South Australia (EGIS), are maintained by the Department of Environment and Water. The supertables store records of flora and fauna observations associated with a spatial location. The supertable aggregates data sources beyond [BDBSA].
+
+The supertables were imported to `R` using the `DBI` package `r cite_package("DBI")`.

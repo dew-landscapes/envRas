@@ -1,0 +1,109 @@
+```{r {{this_data_name}}}
+
+  use_value <- "{{this_data_name}}" # use in file names; see loop at end of 0020_data.Rmd
+  USE_VALUE <- toupper(use_value) # use in text
+
+```
+
+```{r dataSetup{{this_data_name}}}
+
+    #find cached data
+  bio_file <- fs::path(cache_dir, paste0("bio_", use_value, ".rds"))
+
+  if(file.exists(bio_file)){
+    
+    load(bio_file)
+    
+  } else {
+  
+    #or collect source data from bio_all 
+    bio_df <- arrow::open_dataset(bio_all_file) %>%
+         dplyr::filter(year >= settings$min_year) %>%
+         dplyr::filter(data_name == use_value) %>%
+         dplyr::filter(original_name != "") %>% 
+         dplyr::filter(!is.na(lat), !is.na(long)) %>% 
+         dplyr::collect()
+    
+    save(bio_df, file = bio_file)
+  
+  }
+      
+  #plot/summaries options
+  include_time_plot <- bio_df %>%
+    dplyr::mutate(year = lubridate::year(date)
+                  , month = lubridate::month(date)
+    ) %>%
+    dplyr::pull(year) %>%
+    n_distinct() > 1
+  
+  include_summarise_cols <- all(c("original_name", "survey", "rel_metres_adj", "month", "year") %in% names(bio_df))
+    
+
+ 
+```
+
+(ref:timePlotReference{{this_data_name}}) Figure \@ref(fig:timePlot{{this_data_name}})
+
+(ref:dataNameMapReference{{this_data_name}}) Figure \@ref(fig:dataNameMap{{this_data_name}})
+
+```{r dataNameSummary{{this_data_name}}, child = here::here("report", "child", "sources", paste0(use_value, ".Rmd"))}
+```
+
+#### Data
+
+
+`r if(include_summarise_cols) {summarise_cols(bio_df, c("original_name", "survey", "kingdom", "rel_metres", "month", "year"), qs = c(0.05, 0.25, 0.5, 0.75, 0.95))$text}`
+
+`r if(include_time_plot) {paste0("(ref:timePlotReference{{this_data_name}}) shows the distribution of records through time for ", USE_VALUE, ". ")} else paste(USE_VALUE, " did not have temporal data associated. ")`
+`r if(include_dataNameMap) {paste0(" (ref:dataNameMapReference{{this_data_name}}) shows the spatial location of records for ", USE_VALUE, ", within South Australia.")}`
+
+<br>
+
+```{r timePlot{{this_data_name}}, fig.cap = paste("Records from", USE_VALUE, "through time"), eval = include_time_plot}
+
+  data_name_time_plot(bio_df) +
+    ggplot2::labs(subtitle = USE_VALUE)
+
+```
+
+`r if(include_time_plot) {"<br>"}`
+
+```{r dataNameMap{{this_data_name}}, fig.cap = paste("Spatial location of records from", USE_VALUE), eval = include_dataNameMap}
+
+tmap_mode("plot")
+
+  m <- data_name_map(df = bio_df 
+                     , x = "long"
+                     , y = "lat"
+                     , polys = settings$aoi %>%
+                       dplyr::mutate(polys = settings$name)
+                     , aoi = sa_nobuf_proj
+                     , polys_col = "polys"
+                     , polys_name = settings$use_aoi
+                     , polys_alpha = 0
+                     , dots_args = list(title = paste(USE_VALUE, " records")
+                                        , col = "year"
+                                        , legend.format = list(big.mark = "")
+                                        , palette = "viridis"
+                                        , style = "fixed"
+                                        , breaks = seq(1969, 2029, 10)
+                                        , labels = paste0(seq(1970, 2020, 10)
+                                                          , " to "
+                                                          , seq(1979, 2029, 10)
+                                                          ) %>% stringr::str_replace_all("2029"
+                                                                                         , format(Sys.Date(),
+                                                                                                  "%Y")
+                                                                                         )
+                                        )
+                     , layout_args = list(legend.outside = TRUE)
+                     ) +
+    tm_shape(sa_nobuf_proj) +
+    tm_borders(col = "black")
+
+ m
+ 
+ tmap::tmap_mode(use_tmap_mode)
+ 
+```
+
+<br>

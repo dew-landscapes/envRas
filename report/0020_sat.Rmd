@@ -1,0 +1,293 @@
+
+# Satellite cubes
+
+Digital Earth Australia [DEA](https://www.dea.ga.gov.au/) provides earth observation data for Australia. DEA data was accessed via a workflow that:
+
+* finds features available for an area and timeframe
+* creates an image collection from available features
+* defines a [regular cube](https://e-sensing.github.io/sitsbook/earth-observation-data-cubes.html#regular-image-data-cubes) structure
+* create a cloud mask
+* merge the image collection into the parameters defined by the regular cube, taking into account the cloud mask
+
+## Example: building a single seasonal image
+
+The following example finds and processes Landsat 8 data to generate median Normalized Difference Vegetation Index ([NDVI](https://www.usgs.gov/landsat-missions/landsat-normalized-difference-vegetation-index)) for the `r settings$name` example area in summer 2019/2020.
+
+Note that the `envRas` project makes use of the `envRaster` package `r cite_package("envRaster")` to abstract all these steps into the single function `get_sat_data`. 
+
+### Find images
+
+Features available within DEA data were found using [DEA’s SpatioTemporal Asset Catalogue (STAC) metadata](https://knowledge.dea.ga.gov.au/guides/setup/gis/stac/). [STAC](https://stacspec.org/en) is a specification that provides a common language to describe geospatial information so it can more easily be discovered. The `rstac` package `r `cite_package("rstac")` was used to find the images available for each DEA collection specified for an area of interest.
+
+A bounding box is required to define the area for `rstac` to search. In this case, the coordinate systems for the bounding box should be in WGS84 decimal degrees ([epsg: `4326`](https://epsg.io/4326)).
+
+```{r stacExample, include = TRUE, echo = TRUE, cache = TRUE}
+
+  # area of interest defined was made earlier as sat_sets$bbox
+  sat_sets$bbox
+
+  start_date <- "2019-12-01"
+  end_date <- "2020-02-29"
+
+  items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
+    rstac::stac_search(collections = "ga_ls8c_ard_3"
+                       , bbox = sat_sets$bbox
+                       , datetime = paste0(start_date
+                                           , "/"
+                                           , end_date
+                                           )
+                       ) %>%
+    rstac::get_request()
+  
+  length(items$features)
+
+```
+
+In this case `r length(items$features)` images were found.
+
+### Image collection
+
+The next step is to create an image collection using the function `stac_image_collection` from the `gdalcubes` package `r cite_package("gdalcubes")`. In the example below, only images with less than 10% cloud cover are returned.
+
+```{r imageCollection, include = TRUE, echo = TRUE}
+
+  layers <- c("red", "nir")
+
+  col <- gdalcubes::stac_image_collection(items$features
+                                          , asset_names = c(paste0("nbart_", layers), "oa_fmask")
+                                          , property_filter = function(x) {x[["eo:cloud_cover"]] < 10}
+                                          )
+
+  col
+
+```
+
+### Regular cube
+
+The regular cube is defined via the `gdalcubes` function `cube_view`. Here an extent is required: a bounding box with the addition of bounding dates. In this case the coordinate system for the extent should be in the desired coordinate system for the resulting cube ([epsg: `r settings$epsg_proj`](https://epsg.io/7845)).
+
+```{r cubeView, include = TRUE, echo = TRUE, cache = TRUE}
+
+  # sat_sets$use_extent was defined earlier as:
+  sat_sets$use_extent
+
+  use_extent <- c(sat_sets[["use_extent", exact = TRUE]]
+                  , t0 = as.character(start_date)
+                  , t1 = as.character(end_date)
+                  )
+
+  v <- gdalcubes::cube_view(srs = paste0("EPSG:"
+                                             , sat_sets[["epsg_proj", exact = TRUE]]
+                                             )
+                            , extent = use_extent
+                            , dx = sat_sets[["sat_res", exact = TRUE]] 
+                            , dy = sat_sets[["sat_res", exact = TRUE]]
+                            , dt = sat_sets[["period", exact = TRUE]]
+                            , aggregation = "median"
+                            , resampling = "bilinear"
+                            )
+        
+  v
+
+```
+
+### Cloud mask
+
+A cloud mask is created, in this case specifying that pixels identified as cloud and cloud shadow should be masked from the results.
+
+```{r couldMask, include = TRUE, echo = TRUE}
+
+  cloud_mask <- gdalcubes::image_mask("oa_fmask"
+                                      , values = c(2, 3)
+                                      ) # clouds and cloud shadows
+
+
+```
+
+### Merge and collect results
+
+Then the collection, regular cube and cloud mask are brought together, saving the file locally.
+
+```{r regularCube, include = TRUE, echo = TRUE, cache = TRUE}
+  
+  cube <- gdalcubes::raster_cube(col
+                                 , v
+                                 , mask = cloud_mask
+                                 ) %>%
+    gdalcubes::select_bands(paste0("nbart_", layers)) %>%
+    gdalcubes::apply_pixel("(nbart_nir - nbart_red)/(nbart_nir + nbart_red)", "ndvi") %>%
+    gdalcubes::reduce_time("median(ndvi)") %>%
+    gdalcubes::write_tif(dir = here::here("out")
+                         , prefix = "ndvi__"
+                         )
+
+```
+
+Figure \@ref(fig:examplePlot) shows the Normalized Difference Vegetation Index ([NDVI](https://www.usgs.gov/landsat-missions/landsat-normalized-difference-vegetation-index))) result for the example area and timeframe.
+
+```{r examplePlot, fig.cap = "NDVI result for the example area"}
+  
+  terra::plot(terra::rast(here::here("out"
+                                     , paste0("ndvi__"
+                                              , start_date
+                                              , ".tif"
+                                              )
+                                     )
+                          )
+              )
+
+```
+
+## Satellite seasonal cube
+
+```{r satSeasonalCubeData}
+
+  sat_seas_cube_dir <- fs::path("I:"
+                                , "sa_ibrasub_xn______0"
+                                , "P3M__30"
+                                , "DEA__ga_ls8c_ard_3--ga_ls9c_ard_3"
+                                )
+
+  sat_seas_cube <- name_env_tif(sat_seas_cube_dir
+                           , parse = TRUE
+                           ) %>%
+    dplyr::filter(source == "DEA") %>%
+    dplyr::mutate(start_date = as.Date(start_date))
+
+  sat_layers <- sat_seas_cube %>%
+    dplyr::select(source, collection, layer) %>%
+    dplyr::distinct()
+
+  sat_seasons <- settings$epochs %>%
+    tidyr::unnest(cols = c(years)) %>%
+    dplyr::rename(year = years) %>%
+    dplyr::left_join(settings$seasons$seasons) %>%
+    dplyr::inner_join(sat_seas_cube) %>%
+    dplyr::select(year, epoch, season, start_date, end_date) %>%
+    dplyr::distinct()
+
+```
+
+Table \@ref(tab:satCollectionTab) shows the collection and layers prepared from DEA data for each of the seasons in Table \@ref(tab:satSeasonsTab). This created a regular cube of `r nrow(sat_seas_cube)` files made up of `r nrow(sat_layers)` layers with seasonal data for each of `r nrow(sat_seasons)` seasons. This seasonal cube had the following parameters:
+
+* start date: `r min(sat_seasons$start_date)`
+* end date: `r max(sat_seasons$end_date)`
+* period (in [ISO-8601 duration](https://www.digi.com/resources/documentation/digidocs/90001488-13/reference/r_iso_8601_duration_format.htm) format): `r settings$period`
+* x and y distance: `r settings$sat_res` m
+* seasons: `r sat_seasons$season %>% unique %>% vec_to_sentence`
+* December data summarized into following year. e.g. December 2019 data will appear in the summer 2020 layer
+
+[Appendix][appendices] Table \@ref(tab:satSeasCubeApp) lists details for each of the existing layers in the seasonal cube.
+
+<br>
+
+```{r satCollectionTab}  
+  
+  kableExtra::kbl(sat_layers %>%
+                      dplyr::mutate(collection = gsub("--", " and ", collection))
+                    , caption = "DEA collections and layers prepared by envRas"
+                    ) %>%
+  kableExtra::kable_styling()
+
+```
+
+<br>
+
+```{r satSeasonsTab}
+
+  kableExtra::kbl(sat_seasons
+                    , caption = "Start and end dates defining seasons for preparing DEA layers"
+                    ) %>%
+    kableExtra::kable_styling()
+
+```
+
+## Satellite epoch cube
+
+```{r satEpochCubeData}
+
+  sat_epoch_cube_dir <- if(dir.exists(gsub("P3M", "P10Y", settings$sat_seas_cube_dir))) {
+    
+    fs::dir_ls(gsub("P3M", "P10Y", settings$sat_seas_cube_dir))
+    
+  } else {
+  
+    fs::path("H:"
+             , "data"
+             , "raster"
+             , "aligned"
+             , "sa_ibrasub_xn____0__30"
+             )
+    
+  }
+
+  sat_epoch_cube <- terra::rast(sat_epoch_cube_dir)
+
+  sat_epoch_cube_data <- tibble::enframe(terra::sources(sat_epoch_cube), name = NULL, value = "path") %>%
+    name_env_tif(parse = TRUE) %>%
+    dplyr::mutate(values = purrr::map(path, \(x) terra::values(terra::rast(x)))
+                  , data = purrr::map(values, \(x) quibble(x))
+                  , use_name = paste0(layer, " ", season)
+                  , layerid = gsub("[[:punct:]]", "", layer)
+                  ) %>%
+    tidyr::unnest(cols = c(data))
+  
+  names(sat_epoch_cube) <- sat_epoch_cube_data$use_name
+
+```
+
+A cube with `r settings$epoch_period`-year epochs, was then generated from the [seasonal cube]. The epoch cube had the same parameters as the seasonal cube, except that the period was `P10Y` instead of `P3M`. Note that, say, summer, in the `r settings$epoch_period`-year epoch cube took the median values for each summer image in the seasonl cube.
+
+Table \@ref(tab:satEpochTab) shows a summary of the layers and layer values.
+
+```{r satEpochTab}
+
+  kableExtra::kbl(sat_epoch_cube_data %>%
+          dplyr::mutate(across(where(is.numeric), ~round(.x, 2))
+                        , iqr = paste0(q25
+                                     , " to "
+                                     , q75
+                                     )
+                        ) %>%
+          dplyr::select(layer
+                        , season
+                        , median = q50
+                        #, sd
+                        , `inter-quartile range` = iqr
+                        ) %>%
+          janitor::remove_empty(which = "cols")
+        , caption = paste0("Summary of "
+                           , unique(sat_epoch_cube_data$source)
+                           , " (collection "
+                           , unique(sat_epoch_cube_data$collection)
+                           , ") layers for the "
+                           , settings$name
+                           , " example area"
+                           )
+        ) %>%
+      kableExtra::kable_styling("striped") %>%
+      kableExtra::scroll_box(height = "500px"
+                              , fixed_thead = T
+                              )
+
+```
+
+```{r satEpochRmd, eval = do_sat_summary, include = FALSE}
+
+  sat_layers <- unique(sat_epoch_cube_data$layerid)
+
+  sat_layer_rmd = NULL
+  
+  for (i in sat_layers) {
+    
+    this_layer <- i
+    
+    sat_layer_rmd = c(sat_layer_rmd
+                      , knitr::knit_expand(here::here("report", "child", "sat_layer_rmd.Rmd"))
+                      )
+    
+  }
+  
+```
+
+`r if(do_sat_summary) paste(knitr::knit(text = sat_layer_rmd), collapse = '\n')`

@@ -1,0 +1,211 @@
+
+# Climate cubes
+
+ANUClimate 2.0 [@RN4594] is available from the National Computing Infrastructure ([NCI](https://nci.org.au/)) via their [THREDDS](https://docs.unidata.ucar.edu/tds/4.6/adminguide/) service [@RN4593].
+
+NCI data was accessed via a workflow that:
+
+* lists files for each season using the naming structure in the THREDDS service
+    + each season had three files, one for each month in the season
+* created a connection to each of those files
+* subset the data to the desired geographic extent
+* reduced the time axis to a single pixel for that season (min, mean, or max, depending on climate variable)
+* adjusted the result to a grid in the desired output coordinate reference system
+* saved the result locally
+
+## Example
+
+There is no STAC specification for the ANUClimate data available from the NCI. Instead, a series of filenames are built up using a pattern. Each file is the monthly (or daily are also available) climate data for all of Australia at roughly 1 km grid size. Each file is then queried for the geographic subset required.
+
+As per the `get_sat_data`, there is an equivalent `get_cli_data` function in the `envRaster` package that abstracts many of the steps to download a climate cube.
+
+```{r cliExampleFiles}
+
+  cli_example_files <- files %>%
+    dplyr::filter(start_date == as.Date(start_date))
+
+
+    dplyr::mutate(out_file = here::here("report", "out", "cli_example.tif"))
+  
+  cli_example_files$data[[1]]
+  
+```
+
+Three files representing monthly rainfall for the summer of 2014 (December 2013 to February 2014).
+
+```{r cliExampleGet, cache = TRUE}
+  
+  purrr::pwalk(list(cli_example_files$data
+                    , cli_example_files$out_file
+                    , cli_example_files$func
+                    , cli_example_files$scale
+                    , cli_example_files$offset
+                    )
+               , get_cli_data
+               , base = settings$base
+               )
+  
+```
+
+The `get_cli_data` function does the work of saving the resulting cube to the file specified in `cli_examples_files` object `r cli_example_files$out_file`. That example raster can be seen in Figure \@ref(fig:cliExampleMap).
+
+```{r cliExampleMap, fig.cap = "Summer rain result from the call to `get_cli_data`"}
+
+  plot(terra::rast(cli_example_files$out_file))
+
+```
+
+## Climate seasonal cube
+
+```{r cliSeasonalCubeData}
+
+  cli_seas_cube_dir <- fs::path("H:"
+                                , "data"
+                                , 'raster'
+                                , "cube__P3M"
+                                , "NCI__ANUClimate__sa_ibrasub_xn____0"
+                                )
+
+  cli_seas_cube <- parse_env_tif(cli_seas_cube_dir
+                           , parse = TRUE
+                           ) %>%
+    dplyr::filter(source == "NCI") %>%
+    dplyr::mutate(start_date = as.Date(start_date))
+
+  cli_layers <- cli_seas_cube %>%
+    dplyr::select(source, collection, band) %>%
+    dplyr::distinct()
+
+  cli_seasons <- settings$epochs %>%
+    tidyr::unnest(cols = c(years)) %>%
+    dplyr::rename(year = years) %>%
+    dplyr::left_join(settings$seasons$seasons) %>%
+    dplyr::inner_join(cli_seas_cube) %>%
+    dplyr::select(year, epoch, season, start_date, end_date) %>%
+    dplyr::distinct()
+
+```
+
+Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from NCI data for each of the seasons in Table \@ref(tab:cliSeasonsTab). This created a regular cube of `r nrow(cli_seas_cube)` files made up of `r nrow(cli_layers)` layers with seasonal data for each of `r nrow(cli_seasons)` seasons. This seasonal cube had the following parameters:
+
+* start date: `r min(cli_seasons$start_date)`
+* end date: `r max(cli_seasons$end_date)`
+* period (in [ISO-8601 duration](https://www.digi.com/resources/documentation/digidocs/90001488-13/reference/r_iso_8601_duration_format.htm) format): `r settings$period`
+* x and y distance: `r settings$cli_res` m
+* seasons: `r cli_seasons$season %>% unique %>% vec_to_sentence`
+* December data summarized into following year. e.g. December 2019 data will appear in the summer 2020 layer
+
+[Appendix][appendices] Table \@ref(tab:cliSeasCubeApp) lists details for each of the existing layers in the seasonal cube.
+
+<br>
+
+```{r cliCollectionTab}  
+  
+  kableExtra::kbl(cli_layers %>%
+                      dplyr::mutate(collection = gsub("--", " and ", collection))
+                    , caption = "NCI collections and layers prepared by envRas"
+                    ) %>%
+    kableExtra::kable_styling()
+
+```
+
+<br>
+
+```{r cliSeasonsTab}
+
+  kableExtra::kbl(cli_seasons
+                    , caption = "Start and end dates defining seasons for preparing NCI layers"
+                    ) %>%
+    kableExtra::kable_styling()
+
+```
+
+## Climate epoch cube
+
+```{r cliEpochCubeData}
+
+  cli_epoch_cube_dir <- if(dir.exists(gsub("P3M", "P10Y", settings$cli_seas_cube_dir))) {
+    
+    fs::dir_ls(gsub("P3M", "P10Y", settings$cli_seas_cube_dir))
+    
+  } else {
+  
+    fs::path("H:"
+             , "data"
+             , "raster"
+             , "aligned"
+             , "sa_ibrasub_xn____0__90"
+             )
+    
+  }
+
+  cli_epoch_cube <- terra::rast(fs::dir_ls(cli_epoch_cube_dir, regexp = "tif$"))
+
+  cli_epoch_cube_data <- tibble::enframe(terra::sources(cli_epoch_cube), name = NULL, value = "path") %>%
+    name_env_tif(parse = TRUE) %>%
+    dplyr::mutate(values = purrr::map(path, \(x) terra::values(terra::rast(x)))
+                  , data = purrr::map(values, \(x) quibble(x, na.rm = TRUE))
+                  , use_name = paste0(layer, " ", season)
+                  , layerid = gsub("[[:punct:]]", "", layer)
+                  ) %>%
+    tidyr::unnest(cols = c(data))
+  
+  names(cli_epoch_cube) <- cli_epoch_cube_data$use_name
+
+```
+
+A cube with `r settings$epoch_period`-year epochs, was then generated from the [seasonal cube]. The epoch cube had the same parameters as the seasonal cube, except that the period was `P10Y` instead of `P3M`. Note that, say, summer, in the `r settings$epoch_period`-year epoch cube took the median values for each summer image in the seasonl cube.
+
+Table \@ref(tab:cliEpochTab) shows a summary of the layers and layer values.
+
+```{r cliEpochTab}
+
+  kableExtra::kbl(cli_epoch_cube_data %>%
+          dplyr::mutate(across(where(is.numeric), ~round(.x, 2))
+                        , iqr = paste0(q25
+                                     , " to "
+                                     , q75
+                                     )
+                        ) %>%
+          dplyr::select(layer
+                        , season
+                        , median = q50
+                        #, sd
+                        , `inter-quartile range` = iqr
+                        ) %>%
+          janitor::remove_empty(which = "cols")
+        , caption = paste0("Summary of "
+                           , unique(cli_epoch_cube_data$source)
+                           , " (collection "
+                           , unique(cli_epoch_cube_data$collection)
+                           , ") layers for the "
+                           , settings$name
+                           , " example area"
+                           )
+        ) %>%
+      kableExtra::kable_styling("striped") %>%
+      kableExtra::scroll_box(height = "500px"
+                              , fixed_thead = T
+                              )
+
+```
+
+```{r cliEpochRmd, eval = do_cli_summary, include = FALSE}
+
+  cli_layers <- unique(cli_epoch_cube_data$layerid)
+
+  cli_layer_rmd = NULL
+  
+  for (i in cli_layers) {
+    
+    this_layer <- i
+    
+    cli_layer_rmd = c(cli_layer_rmd
+                      , knitr::knit_expand(here::here("report", "child", "cli_layer_rmd.Rmd"))
+                      )
+    
+  }
+  
+```
+
+`r if(do_cli_summary) paste(knitr::knit(text = cli_layer_rmd), collapse = '\n')`

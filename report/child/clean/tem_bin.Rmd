@@ -1,0 +1,5 @@
+#### Temporal bin
+
+The year component of the date for each record became a temporal bin.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

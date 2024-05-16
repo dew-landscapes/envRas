@@ -1,0 +1,66 @@
+```{r satEpoch{{this_layer}}}
+
+  this_layerid <- "{{this_layer}}"
+
+```
+
+```{r satEpochData{{this_layer}}}
+
+  layer_dat <- sat_epoch_cube_data %>%
+    dplyr::filter(layerid == this_layerid)
+
+  this_layer <- unique(layer_dat$layer)
+
+  layer_sentence <- paste0(
+    "There"
+    , " "
+    , if(nrow(layer_dat) > 1) "were" else "was"
+    , " "
+    , numbers2words(nrow(layer_dat))
+    , " "
+    , this_layer
+    , " "
+    , if(nrow(layer_dat) > 1) "layers" else "layer"
+    , " in the satellite cube: \n\n* "
+    , paste0(basename(layer_dat$path), collapse = "\n* ")
+  )
+  
+```
+
+
+### `r stringr::str_to_sentence(this_layer)`
+
+`r layer_sentence`
+
+Figure \@ref(fig:satEpochHist{{this_layer}}) shows the distribution of values in each `r this_layer` layer. Figure \@ref(fig:satEpochMap{{this_layer}}) shows maps for each `r this_layer` layer.
+
+```{r satEpochHist{{this_layer}}, fig.cap = paste0("Distribution of values in ", this_layer)}
+
+  hist_data <- layer_dat %>%
+    tidyr::unnest(cols = c(values))
+
+  ggplot(hist_data, aes(values, fill = season)) +
+    geom_density(alpha = 0.5
+                 , colour = NA
+                 ) +
+    scale_fill_viridis_d() +
+    theme(axis.text.y=element_blank()
+          , axis.ticks.y=element_blank()
+          ) +
+    labs(y = "frequency"
+         , x = this_layer
+         )
+
+```
+
+```{r satEpochMap{{this_layer}}, fig.cap = paste0("Map of ", this_layer), fig.asp = 0.62}
+
+  r <- sat_epoch_cube[[grepl(paste0(this_layer, " "), names(sat_epoch_cube))]]
+
+  names(r) <- gsub(paste0(this_layer, " "), "", names(r))
+  
+  values(r) <- as.numeric(values(r))
+    
+  terra::panel(r)
+              
+```

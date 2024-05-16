@@ -1,0 +1,5 @@
+#### Spatial reliability
+
+Duplicate spatial reliability values per taxa within a context were summarised by taking the minimum non-NA value (i.e. if a context had reliability values of 1000, 100 & NA, they would be reduced to 100). However, no filtering of data was done at this step.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

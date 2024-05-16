@@ -1,0 +1,5 @@
+#### Date range of interest
+
+Records were limited to those with observation dates after `r settings$min_year`.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

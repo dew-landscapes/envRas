@@ -1,0 +1,7 @@
+### TERN
+
+[TERN](https://www.tern.org.au/) measures key terrestrial ecosystem attributes at hundreds of representative locations across Australia, including repeating those measures through time.
+
+At field locations across Australia plots and transects are used to detect and quantify change in vegetation structure and composition, land cover and soil characteristics.
+
+TERN data were imported to `R` using the `ausplotsR` package `r cite_package("ausplotsR")`.

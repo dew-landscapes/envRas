@@ -1,0 +1,7 @@
+### NVB
+
+Officers from the Native Vegetation Branch (NVB) of the Department of Environment and Water visit areas of native vegetation around South Australia to support decision making of the [Native Vegetation Council](https://www.environment.sa.gov.au/about-us/boards-and-committees/native-vegetation-council). Often, as part of these visits, plant species lists are recorded and entered into a Microsoft Excel template.
+
+Searching the network drives of the NVB for such templates and extracting the plant species data, visit date and location details created a dataset refered to here as 'NVB'.
+
+NVB data were imported to `R` using the `tidyxl` package `r cite_package("tidyxl")`.

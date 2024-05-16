@@ -1,0 +1,7 @@
+### GBIF 
+
+[GBIF](https://www.gbif.org/) (Global Biodiversity Information Facility) is an international network and data infrastructure funded by the world's governments and aimed at providing anyone, anywhere, open access to data about all types of life on Earth.
+
+GBIF data were imported to `R` using the `rgbif` package `r envReport::cite_package("rgbif")`. The full list of data sets contributing to the pre-cleaned GBIF download is available at https://doi.org/10.15468/dl.qqs5vd.
+
+GBIF was also used as the definitive source of taxonomy across all data sources as part of data cleaning (see [taxonomy](#taxonomy)).

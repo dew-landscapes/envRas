@@ -1,0 +1,5 @@
+#### Centroids
+
+The geographic location of some records was associated with the centroids of a state or capital city (e.g. may arise if the best location information available was simply "South Australia"), or with institutions such as museums and herbariums (in the case of some collected specimens). Records with coordinates that were within a buffer of these locations were removed.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

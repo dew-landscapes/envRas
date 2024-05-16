@@ -1,0 +1,11 @@
+#### Include
+
+This step filtered to taxa that may occur in `r settings$name` through one or more of three methods:
+
+1)  Taxa with any presence recorded within `r settings$name` was included.
+
+2)  Reliable distributions were gathered from experts and/or EPBC listings. For EPBC distributions, mapping of "species or habitat is likely to occur" was used where available; otherwise "species or habitat may occur" was used. Taxa were included if these distributions intersected `r settings$name`.
+
+3)  A minimum convex polygon was created for each taxa using the `make_mcp` function, with a `r settings$use_buffer / 1000`-km buffer around each presence; taxa were included if their MCP interesected `r settings$name` plus a `r settings$use_buffer / 1000`-km buffer.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

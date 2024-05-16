@@ -1,0 +1,5 @@
+#### Fix Spatial Taxonomy
+
+Where duplicate accepted taxa for the same species were identified, but this was not a straight name change and was geographic area dependent (i.e. a taxa was split geographically, or related taxa were erroneously recorded out of range), taxa names were updated using the `fix_spatial_taxonomy` function in `envClean` using  distributions sourced from IUCN Redlist (https://www.iucnredlist.org/resources/spatial-data-download) and BirdLife International (https://datazone.birdlife.org/species/requestdis).
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

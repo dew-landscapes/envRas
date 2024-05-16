@@ -1,0 +1,11 @@
+#### Maxnet
+
+Maxnet models - based on the maxent algorithm [@RN4472] - were run using the `maxnet` function in the `maxnet` package `r cite_package("maxnet")`.
+
+The tuning arguments for maxnet were the regularisation multiplier (`r vec_to_sentence(format(settings$rm_sdm, big.mark=","))`), and the feature class of variable transformation . The feature class was one or more of linear, quadratric, product or hinge, and was set depending on the number of presence records:
+
+-   linear for 10 or fewer records;
+-   linear, quatratic, or linear/quadratic for 15 or fewer records;
+-   linear, quatratic, linear/quadratic, linear/hinge, quadratic/hinge, or linear/quadratic/hinge for fewer than 80 records;
+-   linear, quatratic, hinge, linear/quadratic, quadratic/hinge, linear/quadratic/product, quadratic/hinge/product, or linear/quadratic/hinge/product for 80 or more records.
+

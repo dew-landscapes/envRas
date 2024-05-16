@@ -1,0 +1,33 @@
+#### Taxonomy {#taxonomy}
+
+```{r remove}
+
+  regexRemove <- c("quotation marks", "question marks", "trailing 'spp.' or 'sp.'", "leading space", "trailing space")
+
+```
+
+Taxa were queried against the global biodiversity information facility (GBIF) [taxonomy backbone](https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c) using the `make_taxa_taxonomy` and `filter_taxa` functions in the `envClean` package `r cite_package("envClean")`. These functions rely heavily on the `name_backbone` function in the `rgbif` package `r cite_package("rgbif")`.
+
+Prior to querying against GBIF the following cleaning steps were undertaken:
+
+-   any record of a taxa that contained any of the following text in its name (ignoring case) was removed:
+    -   `r paste0(settings$species_filt, collapse = "\n    + ")`
+-   any of the following regular expressions in a taxa name were removed from the name (via `gsub`):
+    -   `r paste0(regexRemove, collapse = "\n    + ")`
+-   any text including and after ' x ' or ' X ', in a taxa name, was removed from the name (thus any hybrids were most likely assigned to the first taxa recorded within the hybrid)
+
+The taxa used in analyses were always binomial (taxa recorded at taxonomic level below species were grouped at species level (e.g. *Acanthiza iredalei rosinae* was changed to *Acanthiza iredalei*). Any record that could not be matched to a name at `r settings$rank_to_target` level, or better, was removed. 
+
+Occasionally duplicate accepted taxa exist within the GBIF taxonomic backbone for the same species due to taxonomic updates that are in progress, unresolved taxonomies, or recording errors (e.g. recording an international related species instead of the Australian species). Where duplicate accepted taxa were identified, these were manually combined to the most recently accepted species (see `taxonomy_fixes` in `envClean`).
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`
+
+```{r taxHier}
+
+
+
+```
+
+
+
+

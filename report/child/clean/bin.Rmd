@@ -1,0 +1,5 @@
+#### Distinct records
+
+The last step of the cleaning process ensured that only distinct rows according to `r clean_text$contexts[i]` remained.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

@@ -1,0 +1,78 @@
+
+### Overview
+
+As aggregated sources of occurrence data are becoming more widely used the requirement for cleaning the data for a particular purpose has become well established [e.g. @RN4583; @RN4584]. This cleaning aims to both: minimise errors (taxonomic, spatial and temporal) in the data used; and, perhaps more importantly, minimise spurious or misleading conclusions arising from use of the data. This section outlines the steps taken here to clean the data before using it in any analysis.
+
+The following definitions are used here:
+
+* filter: remove records. These may be entirely legitimate observations but it is desirable to remove them for the purposes of an analysis. For example, a [context](#context) (see below) with only one (legitimate) record may not meet the expectations of an analysis that within each [context](#context) there is a list of taxa recorded.
+* cleaning: remove observations to reduce the risk that spurious observations are included in analysis. For example, two different data sources may contain the same observation. Most analyses will perform better when records duplicated within a context are removed.
+* tidying: as per [tidy data](https://www.jstatsoft.org/article/view/v059i10) [@RN4570] where each variable is a column and each observation is a unique row.
+
+The process of applying these concepts to the data will be referred to as _cleaning_ and was implemented here with the help of the `envClean` package [@R-envClean]. In practice, the filter/clean/tidy steps are blurred. For example `envClean::filter_taxa` aligns taxonomic names, cleans duplicate records within any [context](#context) and filters any taxa that were not identified to at least species level. 
+
+The cleaning process moved from:
+
+* raw records from the different data sources; through
+* assigning each record to a [context](#context) including a geographic [bin](#binning), temporal bin (year) and taxonomic bin (class for vertebrates and kingdom for plants); to
+* ensuring that within each bin, records were unique and appropriately attributed with information required for analysis.
+
+Thus, earlier in the cleaning process the original latitude, longitude and date of observation were more likely to define the context. Later in the cleaning process, geographic areas and year defined the context.
+
+#### Site/visit/record/taxa
+
+Due to the changes in [context](#context) through the cleaning process, the definitions of site, visit, record and taxa can change at each step. 
+
+* sites are spatial locations. They may be defined by latitude and longitude, raster cell ID and/or some other geographical area. These are likely to be duplicated before exclusive application of context
+    + earlier in the data cleaning process these are defined by latitude and longitude
+    + later in the data cleaning process these are defined by raster grid cells of resolution `r terra::res(settings$base)[1]` metres
+    + in the final step of the cleaning process used here they are defined by [RSCA](#rsca) subregions.
+* visits are sites plus a temporal location (time stamp), such as date or year
+    + earlier in the data cleaning process these are defined by date
+    + later in the data cleaning process these are defined by year only
+* records are visits plus an observation of a taxa
+* taxa refers to some form of biological entity (usually species, but often recorded at some other level such as subspecies, genus or even family). An entity may be duplicated within a visit before taxonomy is resolved and context is applied exclusively (usually by `filter_taxa`).
+
+#### Context
+
+Context extends the idea of a visit to include other important context for a record. Here, context includes the taxonomic group (referred to as visit_taxon), which was (roughly) class for vertebrates Aves, Fish, Mammalia, Reptiles, and Amphibia, and 'kingdom' for plants. 'Roughly' as some lumping of the raw class returned from GBIF Taxonomy Backbone was used: the 'fish' visit_taxon included the classes `r vec_to_sentence(settings$fish)` and the 'reptiles' visit_taxon included the classes `r vec_to_sentence(settings$reptiles)`.
+
+#### Binning
+
+Binning was the process of assigning each record to a ‘bin’ (or group) and then reducing the raw records to unique records with each bin. Bins provided the [context](#context) at which the cleaning process was aimed. There were three key components to binning used here: geographic location, temporal location, and taxonomic grouping.
+
+```{r dataFilterData, results = "hide", eval=FALSE}
+
+  data_clean <- clean_summary %>%
+    dplyr::mutate(clean = gsub("bio_","",name)) %>%
+    dplyr::mutate(rmd = purrr::map(clean
+                                     , ~ fs::path(rc_dir
+                                                  , "child"
+                                                  , "clean"
+                                                  , paste0(., ".Rmd")
+                                                  )
+                                     )
+                  , rmd_exists = purrr::map_lgl(rmd, file.exists)
+                  ) %>%
+    dplyr::filter(rmd_exists)
+
+```
+
+```{r cleanText, results = "hide", eval = FALSE}
+
+  report_cols <- unique(c(settings$full_context_cols, "month"))
+
+  clean_text = NULL
+
+  for (i in 1:nrow(data_clean)) {
+    
+    clean_text = c(clean_text
+                  , knitr::knit_child(data_clean$rmd[[i]])
+                  )
+    
+  }
+
+```
+
+<!-- `r paste(knitr::knit(text = clean_text), collapse = '\n')` -->
+

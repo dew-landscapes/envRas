@@ -1,0 +1,98 @@
+--- 
+title: "Environmental rasters for South Australia"
+author:
+- Nigel Willoughby
+- Trevor Hobbs
+- Joel Allen
+- Simeon Zylinski
+- Andrew West
+- Department for Environment and Water
+date: "`r format(Sys.time(), '%A, %d %B, %Y. %H:%M')`"
+link-citations: yes
+bibliography:
+-  "`r fs::path('H:', 'data', 'bib', 'refs.bib')`"
+-  "`r here::here('report', 'packages.bib')`"
+always_allow_html: yes
+description: R code to generate environmental rasters
+---
+
+```{r setup, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+
+  repo_link <- paste0("https://github.com/Acanthiza/", basename(here::here()))
+
+  #------Bibliography-------
+
+  ## generic bib----
+  bib_file <- fs::path("H:", "data", "bib", "refs.bib")
+  
+  ## specific bib-------
+  out_file <- here::here("report", "bib_style.csl")
+
+  if(!file.exists(out_file)) {
+    
+    url <- "https://raw.githubusercontent.com/citation-style-language/styles/master/emu-austral-ornithology.csl"
+    download.file(url, here::here("report", "bib_style.csl"))
+    
+  }
+
+  unlink(here::here("report", "packages.bib"))
+  
+  knitr::write_bib(x = packages
+                   , file = here::here("report", "packages.bib")
+                   )
+  
+  #--------knitr options--------
+  
+  knitr::opts_knit$set(eval.after = "fig.cap" 
+                       , output_dir = here::here("report")
+                       , progress = FALSE
+                       )
+
+  
+  knitr::opts_chunk$set(echo = FALSE
+                        , warning = FALSE
+                        , error = FALSE
+                        , message = FALSE
+                        , tidy = TRUE
+                        #, tidy.opts = list(comment = FALSE)
+                        #, dpi = 300
+                        #, fig.width = 7
+                        )
+  
+  # kableExtra options --------
+  
+  bs_style <- c("striped")
+
+  options(kable_styling_bootstrap_options = bs_style)
+
+  #sa state outline
+  sa <- sfarrow::st_read_parquet(fs::path("H:"
+                                          , "data"
+                                          , "vector"
+                                          , "sa.parquet"
+                                          )
+                                 ) %>%
+    sf::st_transform(crs = settings$epsg_proj) %>%
+    sf::st_make_valid()
+  
+  
+  #--------options-------
+
+  options(knitr.kable.NA = ""
+          , knitr.duplicate.label = "allow"
+          )
+  
+  # tmap mode - overrides "view" set in 0010_setup
+  tmap::tmap_mode("view")
+    
+  ##or set manually
+  if(FALSE) use_tmap_mode <- "plot"
+  
+  terra::terraOptions(progress = 0) #suppress progress bars
+  
+
+```
+
+# Aim {-}
+
+This goal of `envRas` is to create analysis ready raster data for a specific area.

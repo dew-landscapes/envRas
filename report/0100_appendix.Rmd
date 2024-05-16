@@ -1,0 +1,88 @@
+
+# Appendices {-}
+
+## Packages
+
+```{r packages}
+
+  kableExtra::kbl(tibble(package = packages) %>%
+                      dplyr::mutate(citation = purrr::map_chr(package
+                                                              , cite_package
+                                                              , brack = FALSE
+                                                              )
+                                    ) %>%
+                      dplyr::left_join(as_tibble(devtools::session_info(include_base = TRUE)$packages)) %>%
+                      dplyr::select(package, citation, loadedversion, date
+                                    , source
+                                    ) %>% 
+                      dplyr::mutate(source = case_when(grepl("Github", source) ~ "Github"
+                                                       , TRUE ~ source
+                                                       )
+                                    )
+                    , caption = paste0("R "
+                                       , cite_package("base")
+                                       , " packages used in the production of this report"
+                                       )
+                    ) %>%
+    kableExtra::kable_styling()
+
+```
+
+## Satellite seasonal cube
+
+```{r satSeasCubeApp}
+
+  get_att <- function(desc, location, col) {
+
+    extract_col <- function(desc, location, col) {
+      
+      desc[[location]][[col]]
+      
+    }
+    
+    safe_extract_col <- purrr::safely(extract_col)
+    
+    res <- safe_extract_col(desc, location, col)
+    
+    if(!is.null(res$result)) res$result else NA
+    
+  }
+
+  sat_seas_cube_details <- sat_seas_cube %>%
+    dplyr::mutate(desc = purrr::map(path, \(x) jsonlite::fromJSON(terra::describe(x, options = "json")))
+                  , scale = purrr::map_dbl(desc, \(x) get_att(x, "bands", "scale"))
+                  , offset = purrr::map_dbl(desc, \(x) get_att(x, "bands", "offset"))
+                  , type = purrr::map_chr(desc, \(x) get_att(x, "bands", "type"))
+                  , no_data = purrr::map_dbl(desc, \(x) get_att(x, "bands", "noDataValue"))
+                  , epsg = purrr::map_dbl(desc, \(x) get_att(x, "stac", "proj:epsg"))
+                  )
+
+  sat_seas_cube_details %>%
+    dplyr::select(period, res, layer, season, start_date, scale, offset, type, no_data, epsg) %>%
+    kableExtra::kbl(caption = paste0("Satellite seasonal cube data as at: ", format(Sys.Date(), "%d-%B-%Y")))  %>%
+  kableExtra::kable_styling(font_size = 10)
+
+```
+
+## Satellite epoch cube
+
+```{r seasonalCubeTab}
+
+  sat_epoch_cube_data %>%
+    dplyr::mutate(desc = purrr::map(path, \(x) jsonlite::fromJSON(terra::describe(x, options = "json")))
+                  , scale = purrr::map_dbl(desc, \(x) get_att(x, "bands", "scale"))
+                  , offset = purrr::map_dbl(desc, \(x) get_att(x, "bands", "offset"))
+                  , type = purrr::map_chr(desc, \(x) get_att(x, "bands", "type"))
+                  , no_data = purrr::map_dbl(desc, \(x) get_att(x, "bands", "noDataValue"))
+                  , epsg = purrr::map_dbl(desc, \(x) get_att(x, "stac", "`proj:epsg`"))
+                  ) %>%
+    dplyr::select(period, res, layer, season, start_date, scale, offset, type, no_data) %>%
+    kableExtra::kbl(caption = paste0("Satellite seaonal epoch cube data as at: "
+                                       , format(Sys.Date()
+                                                , "%d-%B-%Y"
+                                                )
+                                       )
+                      ) %>%
+    kableExtra::kable_styling(font_size = 10)
+
+```

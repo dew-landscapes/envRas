@@ -1,0 +1,7 @@
+### BDBSA 
+
+[BDBSA](https://www.environment.sa.gov.au/topics/Science/Information_data/Biological_databases_of_South_Australia) (Biological Database of South Australia), maintained by the Department of Environment and Water, stores records of flora and fauna observations associated with a spatial location.
+
+Historically, much of the data in BDBSA was collected using the standards of the Biological Survey of South Australia [e.g. @RN192] but there has always been the ability to add data collected by other means, including opportunistically collected data.
+
+BDBSA data tables were imported to `R` using the `DBI` package `r cite_package("DBI")`.

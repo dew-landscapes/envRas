@@ -1,0 +1,5 @@
+### BCM 
+
+[BCM](https://www.ncssa.asn.au/bushland-health-and-condition/) (Bushland Condition Monitoring) is a method developed by the Nature Conservation Society of South Australia to help land managers assess various components of bushland condition.
+
+The Department of Environment and Water maintain a Microsoft Access database of BCM data, _SABAT_. SABAT data tables were imported to `R` using a custom function `access_query_32` [(see stackoverflow)](https://stackoverflow.com/questions/13070706/how-to-connect-r-with-access-database-in-64-bit-window).

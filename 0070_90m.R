@@ -1,4 +1,5 @@
 
+if(FALSE) {
 
   env_30m_data <- fs::dir_ls(settings$munged_dir) %>%
     tibble::enframe(name = NULL, value = "path") %>%
@@ -36,4 +37,6 @@
               , fun = "mean"
               , na.rm = TRUE
               )
+  
+}
   

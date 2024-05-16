@@ -1,0 +1,6 @@
+#### Random Forest
+
+RF models were run using the `randomForest` function in the `randomForest` package `r cite_package("randomForest")`.
+
+The tuning arguments for RF were the number of trees (`r vec_to_sentence(format(settings$trees, big.mark=","))`) and `mtry`, the number of predictor variables randomly sampled at each tree branch (set as the square-root of the number of variables).
+

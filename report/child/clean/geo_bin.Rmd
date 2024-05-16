@@ -1,0 +1,7 @@
+#### Cell (assign a spatial bin)
+
+A raster was created covering the geographic range of the data with resolution of `r terra::res(settings$base)[1]` m. Cell IDs from that raster were assigned to all records using the latitude and longitude values associated with the record using the function `add_raster_cell` from the `envRaster` package `r cite_package("envRaster")`, which calls the `cellFromXY` function in the `terra` package `r cite_package("terra")`. X/Y coordinates were (re-)assigned to each record using the centre of the raster cell in which the original location fell.
+
+If a record was inside the area of interest but outside of raster cells, it was removed.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

@@ -1,0 +1,3 @@
+### Other
+
+"Other" included private fauna datasets outside of EGIS and GBIF, or records that had not yet been added to BDBSA.

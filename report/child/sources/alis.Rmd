@@ -1,0 +1,11 @@
+### ALIS 
+
+[ALIS](https://www.pir.sa.gov.au/aghistory/natural_resources/pastoral_land_management) (Arid Lands Information System), maintained by the Department of Primary Industries and Regions, stores data associated with the monitoring of land condition on pastoral leases in South Australia.
+
+Monitoring is generally done along a fixed 4 m x 100 m transect and enables a density and frequency estimate of perennials for each site [@RN4553] via:
+
+* 100 small (2 m x 2 m) quadrats along each side of the belt transect
+* recordings made for each qudrat
+* identification of perennial plant species.
+
+ALIS data were imported to `R` using the `DBI` package `r cite_package("DBI")`.

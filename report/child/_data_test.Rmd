@@ -1,0 +1,152 @@
+```{r {{this_data_name}}}
+
+  use_value <- tolower("{{this_data_name}}") # use in figure references and file names
+
+```
+
+```{r dataSetup{{this_data_name}}}
+library(dplyr)
+library(envReport)
+library(lubridate)
+library(ggplot2)
+library(sf)
+
+bio_all_file <- "H:/data/vector/bio_all.parquet"
+use_value <- "alis"
+
+settings <- rio::import("H:/projects/envPIA/out/analysis/pia__50000__spatial__90__Study_Area__Study Area A1--Study Area B2--Study Area D--Study Area C--Study Area A2--Study Area B1/settings.rds")
+
+  codes <- fs::dir_ls(fs::path(here::here()
+                               , "function"
+                               )
+                      ) %>%
+    grep("\\/_", ., value = TRUE, invert = TRUE)
+  
+  # safe_source <- safely(source) # try not to use this as it is better to error here than half way through the workflow
+  
+  purrr::walk(codes
+              , source
+              )
+
+
+bio_data_name_dir <- "H:/projects/envOcc/out/ds"
+
+  #setup aligning col names
+  lunames <- envImport::data_map %>% 
+    dplyr::filter(data_name == use_value) %>% 
+    dplyr::select(-epsg, -order, -days) %>% 
+    tidyr::pivot_longer(names_to = "name", cols = -data_name, values_to = "fromdata") %>% 
+    dplyr::select(name, fromdata) %>% 
+    tidyr::drop_na()
+
+
+  #collect source's data
+  bio_file <- fs::path(bio_data_name_dir, use_value, paste0(use_value, "_raw.rds"))
+
+  # if(file.exists(bio_file)){
+  # 
+  # bio_df <- rio::import(bio_file)
+  # 
+  # } else {
+      
+      bio_df <- arrow::open_dataset(bio_all_file) %>%
+        dplyr::filter(year >= settings$min_year) %>%
+        dplyr::filter(data_name == use_value) %>%
+        dplyr::filter(original_name != "") %>% 
+        dplyr::collect()
+      
+      # }
+    
+  # plots setup
+      if(use_value != "alis"){
+  bio_df <- bio_df %>% 
+    dplyr::select(any_of(lunames$fromdata)) %>%
+    plyr::rename(setNames(lunames$name, lunames$fromdata))
+      }
+  
+  include_time_plot <- bio_df %>%
+    dplyr::mutate(year = lubridate::year(date)
+                  , month = lubridate::month(date)
+    ) %>%
+    dplyr::pull(year) %>%
+    n_distinct() > 1
+  
+  
+    include_summarise_cols <- all(c("original_name", "survey", "kingdom", "rel_metres", "month", "year") %in% names(bio_df))
+
+    
+  # extract_date <- data_info_bio %>%
+  #   dplyr::filter(data_name == use_value) %>%
+  #   {if(nrow(.) > 1) (.) %>% dplyr::mutate(text_date = paste0(text_date
+  #                                                             , " ("
+  #                                                             , if_else(kingdom == "Plantae", "flora", "fauna")
+  #                                                             , ")"
+  #                                                             )
+  #                                          )  else (.)
+  #     } %>%
+  #   dplyr::pull(text_date) %>%
+  #   envFunc::vec_to_sentence()
+  
+
+ 
+```
+
+(ref:timePlotReference{{this_data_name}}) Figure \@ref(fig:timePlot{{this_data_name}})
+
+#### `r paste0(use_value, " (", use_value, ") {#", toupper(use_value), "}")`
+
+##### Background
+```{r dataNameSummary{{this_data_name}}, child = here::here("report", "child", "sources", paste0(use_value, ".Rmd"))}
+```
+
+<br>
+
+##### Data
+
+`r if(include_summarise_cols) {summarise_cols(bio_df, c("original_name", "survey", "kingdom", "rel_metres", "month", "year"), qs = c(0.05, 0.25, 0.5, 0.75, 0.95))$text}`
+
+`r if(include_time_plot) {paste0("(ref:timePlotReference{{this_data_name}}) shows the distribution of records through time for ",use_value,". ")}`Figure \@ref(fig:dataNameMap{{this_data_name}}) shows the spatial location of records for `r use_value`. The region boundaries used in Figure \@ref(fig:dataNameMap{{this_data_name}}) are those of the Regional Species Conservation Assessment ((RSCA)[#rsca]) project (also see in Figure \@ref(fig:rscalsaFig)).
+
+<br>
+
+```{r timePlot{{this_data_name}}, fig.cap = paste0("Records from ",use_value," through time"), eval = include_time_plot}
+
+  data_name_time_plot(bio_df)
+
+```
+
+`r if(include_time_plot) {"<br>"}`
+
+```{r dataNameMap{{this_data_name}}, fig.cap = paste0("Location of sites at the beginning of the cleaning process from ",use_value,", including the year of last visit. For definitions of regions, see (RSCA)[#rsca]")}
+
+  m <- data_name_map(df = bio_df %>% filter(!is.na(lat))
+                     , x = "long"
+                     , y = "lat"
+                     , polys = settings$aoi %>%
+                       dplyr::mutate(polys = settings$name)
+                     , aoi = settings$aoi
+                     , polys_col = "polys"
+                     , polys_name = settings$use_aoi
+                     , polys_alpha = 0
+                     , dots_args = list(title = paste0(use_value, " records")
+                                        # , col = "year"
+                                        , legend.format = list(big.mark = "")
+                                        , palette = "viridis"
+                                        , style = "fixed"
+                                        , breaks = seq(1979, 2029, 10)
+                                        , labels = paste0(seq(1980, 2020, 10)
+                                                          , " to "
+                                                          , seq(1989, 2029, 10)
+                                                          ) %>% stringr::str_replace_all("2029"
+                                                                                         , format(Sys.Date(),
+                                                                                                  "%Y")
+                                                                                         )
+                                        )
+                     )
+
+  m
+
+```
+
+<br>
+

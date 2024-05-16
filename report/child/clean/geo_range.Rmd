@@ -1,0 +1,7 @@
+#### Area of interest
+
+Records from the data sources were limited to those within South Australia, using the `filter_aoi` function in the `envClean` package `r cite_package("envClean")`.
+
+<!-- The combined data for the area of interest contained `r format(nrow(clean_end),big.mark=",")` records of `r format(n_distinct(clean_end$taxa),big.mark=",")` taxa from `r format(clean_end %>% dplyr::distinct(across(any_of(settings$context_cols))) %>% nrow(),big.mark=",")` visits to `r format(clean_end %>% dplyr::distinct(across(any_of(settings$geo_cols))) %>% nrow(),big.mark=",")` locations. -->
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

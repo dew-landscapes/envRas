@@ -1,0 +1,21 @@
+book_filename: "envRas"
+language: 
+ ui:
+  chapter_name: "Chapter "
+delete_merged_file: no
+new_session: no
+
+rmd_files:
+  [
+    "index.Rmd"
+
+    , "0010_introduction.Rmd"
+    
+    , "0020_sat.Rmd"
+    
+    , "0030_cli.Rmd"
+    
+    , "0090_references.Rmd"
+
+    , "0100_appendix.Rmd"
+  ]

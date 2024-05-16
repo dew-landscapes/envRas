@@ -1,0 +1,5 @@
+#### Presence/Occurrence
+
+Records were filtered to only 'presence'; i.e. absences were removed.
+
+`r paste0(clean_text$text[i], " ", clean_text$context_text[i])`

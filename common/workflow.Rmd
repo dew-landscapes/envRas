@@ -1,0 +1,28 @@
+## Workflow
+
+The data import, cleaning, analysis and report writing were done in a scripted workflow using the programs `R` and 'R-studio Desktop'. [`R`](https://www.r-project.org/) [@R-base] is an open source software environment for statistical computing and graphics. Base R can be extended via a range of open source packages to enable specific tasks or analyses. The packages used to produce this report are listed in Table \@ref(tab:packages).
+
+[R-studio Desktop](https://posit.co/download/rstudio-desktop/) is a set of open source tools built to facilitate interaction with `R`.
+
+<br>
+
+```{r packages}
+
+  kable(tibble(package = packages) %>%
+          dplyr::mutate(citation = paste0("@R-"
+                                          , package
+                                          )
+                        ) %>%
+          dplyr::left_join(tibble::as_tibble(devtools::session_info(include_base = TRUE)$packages)) %>%
+          dplyr::select(package
+                        , citation
+                        , loadedversion
+                        , date
+                        , source
+                        )
+        , caption = "R [@R-base] packages used in the production of this report" 
+        )
+
+```
+
+<br>
