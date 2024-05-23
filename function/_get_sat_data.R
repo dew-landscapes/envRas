@@ -1,5 +1,5 @@
   
-  _get_sat_data <- function(out_dir
+  get_sat_data_ <- function(out_dir
                            , start
                            , end
                            , settings

@@ -16,7 +16,7 @@
     , "tmax", "max", 0, 50 # from the data: min = 5.96 and max = 44.1
     )
   
-  safe_nc <- purrr::safely(stars::read_ncdf)
+  
 
   files <- settings[["seasons", exact = TRUE]]$months %>%
     dplyr::cross_join(cli_layers) %>%

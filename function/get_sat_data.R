@@ -1,29 +1,31 @@
-  
-  get_sat_data <- function(start_date
+
+
+  get_sat_data <- function(x
+                           , start_date
                            , end_date
                            , season
-                           , sat_sets # named list with use_extent, epsg_proj, sat_collection, bbox, sat_res, period
+                           , out_dir
+                           , collections
+                           , period
                            , layers = c("green", "blue", "red")
                            , indices = list(gdvi = c("green", "nir")
                                             , ndvi = c("nir", "red")
                                             )
                            , force_new = FALSE
+                           , attempts = 3
                            , mask = list(band = "oa_fmask"
-                                          , mask = c(2, 3)
-                                          )
+                                         , mask = c(2, 3)
+                                         )
                            , sleep = 60 # seconds to wait between failed get_request calls
                            , ... # passed to gdalcubes::stac_image_collection
-                           ) {
-    
-    message(start_date, " to ", end_date)
+                         ) {
     
     # check files ------
-    
     check_files <- tibble::tibble(out_file = c(layers, names(indices))
                                   , start_date = start_date
                                   , season = season
                                   ) %>%
-      dplyr::mutate(out_file = fs::path(sat_sets$out_dir
+      dplyr::mutate(out_file = fs::path(out_dir
                                         , paste0(out_file
                                                  , "__"
                                                  , season
@@ -36,23 +38,31 @@
                     ) %>%
       dplyr::filter(!done)
     
-    if(nrow(check_files)) {
     
-      # find images--------
+    if(any(as.logical(nrow(check_files)), force_new)) {
+      
+      fs::dir_create(out_dir)
       
       items <- NULL
       
       counter <- 0
       
-      while(!any(!is.null(items), counter > 10)) {
+      r <- terra::rast(x)
+      
+      x_bbox_latlong <- sf::st_bbox(r) %>%
+        sf::st_as_sfc() %>%
+        sf::st_transform(crs = 4326) %>%
+        sf::st_bbox()
+      
+      while(!any(!is.null(items), counter > attempts)) {
         
         if(counter > 0) Sys.sleep(sleep)
         
-        stac_request <- function(start_date, end_date, sat_sets) {
+        stac_request <- function(start_date, end_date, collections) {
           
           rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
-            rstac::stac_search(collections = sat_sets[["sat_collection", exact = TRUE]]
-                               , bbox = sat_sets[["bbox", exact = TRUE]]
+            rstac::stac_search(collections = collections
+                               , bbox = x_bbox_latlong
                                , datetime = paste0(as.character(start_date)
                                                    , "/"
                                                    , as.character(end_date)
@@ -63,17 +73,15 @@
           
         }
         
-        safe_request <- purrr::safely(stac_request)
+        safe_stac <- purrr::safely(stac_request)
         
-        items <- safe_request(start_date, end_date, sat_sets)
+        items <- safe_stac(start_date, end_date, collections)
         
-        if(!is.null(items$error)) {
+        if(is.null(items$error)) {
           
-          message(items$error)
-          
-        }
+          items <- items$result
         
-        items <- items$result
+        } else items <- NULL
         
         counter <- counter + 1
         
@@ -81,6 +89,8 @@
                 , counter
                 , ". features: "
                 , length(items$features)
+                , ". for: "
+                , out_dir
                 )
         
       }
@@ -112,19 +122,18 @@
         
         
         # cube setup------
-        
-        use_extent <- c(sat_sets[["use_extent", exact = TRUE]]
+        use_extent <- c(as.list(sf::st_bbox(r))
                         , t0 = as.character(start_date)
                         , t1 = as.character(end_date)
                         )
         
-        v_num <- gdalcubes::cube_view(srs = paste0("EPSG:"
-                                                   , sat_sets[["epsg_proj", exact = TRUE]]
-                                                   )
+        names(use_extent)[1:4] <- c("left", "bottom", "right", "top")
+        
+        v_num <- gdalcubes::cube_view(srs = paste0("EPSG:", terra::crs(r, describe = T)$code)
                                       , extent = use_extent
-                                      , dx = sat_sets[["sat_res", exact = TRUE]] 
-                                      , dy = sat_sets[["sat_res", exact = TRUE]]
-                                      , dt = sat_sets[["period", exact = TRUE]]
+                                      , dx = terra::res(r)[1]
+                                      , dy = terra::res(r)[2]
+                                      , dt = period
                                       , aggregation = "median"
                                       , resampling = "bilinear"
                                       )
@@ -140,137 +149,190 @@
         
         # process layers------
         
-        purrr::walk(layers
-                    , function(x) {
-                      
-                      message(x)
-                      
-                      out_file <- fs::path(sat_sets$out_dir
-                                           , paste0(gsub("nbart_", "", x)
-                                                    , "__"
-                                                    , season
-                                                    , "__"
-                                                    , start_date
-                                                    , ".tif"
-                                                    )
-                                           )
-                      
-                      run <- if(!file.exists(out_file)) TRUE else force_new
-                      
-                        if(run) {
+        still_to_do <- check_success(out_dir
+                                     , paste0(layers)
+                                     , removes = "nbart_"
+                                     )
+        
+        counter <- 0
+        
+        while(!any(length(still_to_do) == 0, counter > attempts)) {
+          
+          force_new_layers <- if(counter == 0) force_new else TRUE 
+        
+          purrr::walk(still_to_do
+                      , \(this_layer) {
                         
-                        r <- gdalcubes::raster_cube(col
-                                                    , v_num
-                                                    , mask = if(exists("cloud_mask")) cloud_mask else NULL
-                                                    ) %>%
-                          gdalcubes::select_bands(x) %>%
-                          gdalcubes::reduce_time(names = gsub("nbart_", "", x)
-                                                 , FUN = \(a) {
-                                                   
-                                                   median(a, na.rm = TRUE)
-                                                   
-                                                 }
-                                                 )
+                        message(this_layer)
                         
-                        gdalcubes::write_tif(r
-                                             , dir = dirname(out_file)
-                                             , prefix = paste0(gsub("nbart_", "", x)
-                                                               , "__"
-                                                               , season
-                                                               , "__"
-                                                               )
-                                             , pack = gdalcubes::pack_minmax(type = "int16"
-                                                                             , min = 0
-                                                                             , max = 10000
-                                                                             )
-                                             , creation_options = list("COMPRESS" = "NONE")
+                        out_file <- fs::path(out_dir
+                                             , paste0(gsub("nbart_", "", this_layer)
+                                                      , "__"
+                                                      , season
+                                                      , "__"
+                                                      , start_date
+                                                      , ".tif"
+                                                      )
                                              )
+                        
+                        run <- if(!file.exists(out_file)) TRUE else force_new_layers
+                        
+                        if(run) {
+                          
+                          r <- gdalcubes::raster_cube(col
+                                                      , v_num
+                                                      , mask = if(exists("cloud_mask")) cloud_mask else NULL
+                                                      ) %>%
+                            gdalcubes::select_bands(this_layer) %>%
+                            gdalcubes::reduce_time(names = gsub("nbart_", "", this_layer)
+                                                   , FUN = \(a) {
+                                                     
+                                                     median(a, na.rm = TRUE)
+                                                     
+                                                   }
+                                                   )
+                          
+                          capture.output(
+                             
+                             gdalcubes::write_tif(r
+                                                 , dir = dirname(out_file)
+                                                 , prefix = paste0(gsub("nbart_", "", this_layer)
+                                                                   , "__"
+                                                                   , season
+                                                                   , "__"
+                                                                   )
+                                                 , pack = gdalcubes::pack_minmax(type = "int16"
+                                                                                 , min = 0
+                                                                                 , max = 10000
+                                                                                 )
+                                                 , creation_options = list("COMPRESS" = "NONE")
+                                                 )
+                             
+                             , file = gsub("tif$", "log", out_file)
+                             , type = "message"
+                             )
+                          
+                        }
                         
                         }
                       
-                      }
-                    
-                    )
+                      )
+          
+          counter <- counter + 1
+          
+          still_to_do <- check_success(out_dir
+                                       , still_to_do
+                                       , removes = "nbart_"
+                                       )
+          
+          message("counter: ", counter
+                  , ". "
+                  , out_dir
+                  , ". layers still to do: "
+                  , vec_to_sentence(still_to_do)
+                  )
+          
+        }
         
         
         # process indices-------
         
-        purrr::iwalk(indices
-                     , \(x, idx) {
-                       
-                       message(idx)
-                       
-                       out_file <- fs::path(sat_sets$out_dir
-                                            , paste0(idx
-                                                     , "__"
-                                                     , start_date
-                                                     , ".tif"
-                                                     )
-                                            )
-                       
-                       run <- if(!file.exists(out_file)) TRUE else force_new
-                       
-                       if(run) {
-                       
-                         # this deals with 'nbart_' 
-                         x[[1]] <- grep(x[[1]], layers, value = TRUE)
-                         x[[2]] <- grep(x[[2]], layers, value = TRUE)
+        still_to_do <- check_success(out_dir
+                                     , names(indices)
+                                     )
+        
+        counter <- 0
+        
+        while(!any(length(still_to_do) == 0, counter > attempts)) {
+          
+          force_new_layers <- if(counter == 0) force_new else TRUE 
+        
+          purrr::iwalk(indices[still_to_do]
+                       , \(x, idx) {
                          
-                         r <- gdalcubes::raster_cube(col
-                                                     , v_num
-                                                     , mask = cloud_mask
-                                                     ) %>%
-                           gdalcubes::select_bands(c(x[[1]], x[[2]])) %>%
-                           gdalcubes::apply_pixel(paste0("("
-                                                         , x[[1]]
-                                                         , "-"
-                                                         , x[[2]]
-                                                         , ")/("
-                                                         , x[[1]]
-                                                         , "+"
-                                                         , x[[2]]
-                                                         , ")"
-                                                         )
-
-                                                  ) %>%
-                           gdalcubes::reduce_time(names = idx
-                                                  , FUN = \(a) {
-                                                    
-                                                    median(a, na.rm = TRUE)
-                                                    
-                                                  }
-                                                  
-                                                  )
+                         message(idx)
                          
-                         gdalcubes::write_tif(r
-                                              , dir = dirname(out_file)
-                                              , prefix = paste0(idx
-                                                                , "__"
-                                                                , season
-                                                                , "__"
-                                                                )
-                                              , pack = gdalcubes::pack_minmax(type="int16"
-                                                                              , min = -1
-                                                                              , max = 1
-                                                                              )
-                                              , creation_options = list("COMPRESS" = "NONE")
+                         out_file <- fs::path(out_dir
+                                              , paste0(idx
+                                                       , "__"
+                                                       , start_date
+                                                       , ".tif"
+                                                       )
                                               )
                          
+                         run <- if(!file.exists(out_file)) TRUE else force_new_layers
+                         
+                         if(run) {
+                         
+                           # this deals with 'nbart_' 
+                           x[[1]] <- grep(x[[1]], layers, value = TRUE)
+                           x[[2]] <- grep(x[[2]], layers, value = TRUE)
+                           
+                           r <- gdalcubes::raster_cube(col
+                                                       , v_num
+                                                       , mask = cloud_mask
+                                                       ) %>%
+                             gdalcubes::select_bands(c(x[[1]], x[[2]])) %>%
+                             gdalcubes::apply_pixel(paste0("("
+                                                           , x[[1]]
+                                                           , "-"
+                                                           , x[[2]]
+                                                           , ")/("
+                                                           , x[[1]]
+                                                           , "+"
+                                                           , x[[2]]
+                                                           , ")"
+                                                           )
+                                                    , names = idx
+                                                    ) %>%
+                             gdalcubes::reduce_time(names = idx
+                                                    , FUN = \(a) {
+                                                      
+                                                      median(a, na.rm = TRUE)
+                                                      
+                                                    }
+                                                    
+                                                    )
+                           capture.output(
+                             
+                             gdalcubes::write_tif(r
+                                                  , dir = dirname(out_file)
+                                                  , prefix = paste0(idx
+                                                                    , "__"
+                                                                    , season
+                                                                    , "__"
+                                                                    )
+                                                  , pack = gdalcubes::pack_minmax(type="int16"
+                                                                                  , min = -1
+                                                                                  , max = 1
+                                                                                  )
+                                                  , creation_options = list("COMPRESS" = "NONE")
+                                                  )
+                            , file = gsub("tif$", "log", out_file)
+                            , type = "message"
+                           )
+                           
+                         }
+                         
                        }
-                       
-                     }
-                     
-        )
+                       )
           
-        } else {
+          counter <- counter + 1
           
-          message("No stac items retrieved")
+          still_to_do <- check_success(out_dir
+                                       , still_to_do
+                                       )
+          
+          message("counter: ", counter
+                  , ". layers still to do: "
+                  , vec_to_sentence(still_to_do)
+                  )
           
         }
+          
+      }
       
-    } else message("all files done")
-      
-    # return------
+    }
     
     return(invisible(NULL))
     

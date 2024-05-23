@@ -4,9 +4,9 @@ get_static_data <- function(static_sets
                             , layers = c("frequency")
                             , force_new = FALSE
                             , sleep = 60 # seconds to wait between failed get_request calls
-                            , start_date <- "1970-01-01"
-                            , end_date <- "2019-12-01"
-                            , season <- "all"
+                            , start_date = "1970-01-01"
+                            , end_date = "2019-12-01"
+                            , season = "all"
                             , ... # passed to gdalcubes::stac_image_collection
                             ) {
     

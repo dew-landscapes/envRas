@@ -4,7 +4,7 @@
   # context
   settings$vector <- "parks"
   settings$filt_col <- "RESNAME"
-  settings$level <- "Bakara"
+  settings$level <- "Murray River"
   settings$buffer <- 2500
 
   # context extra (not in)  
@@ -28,7 +28,7 @@
   run_to <- 90
   skips <- NULL
   
-  max_cores <- 30
+  max_cores <- 10
   
   envFunc::run(run_from, run_to, skips)
   

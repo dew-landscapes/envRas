@@ -7,12 +7,15 @@
                            , offset
                            ) {
     
+    safe_nc <- purrr::safely(stars::read_ncdf)
+    
     r <- purrr::map(urls_df$file
                     , safe_nc
                     , proxy = TRUE
                     ) %>%
       purrr::map("result") %>%
-      purrr::discard(is.null)
+      purrr::compact()
+    
     
     if(length(r)) {
     
@@ -20,7 +23,8 @@
         purrr::map(sf::st_set_crs, settings$epsg_latlong) %>%
         purrr::map(`[`
                    , i = settings$boundary %>%
-                     sf::st_transform(crs = settings$epsg_latlong)
+                     sf::st_transform(crs = settings$epsg_latlong) %>%
+                     sf::st_bbox()
                    ) %>%
         purrr::map(stars::st_as_stars
                    , proxy = FALSE

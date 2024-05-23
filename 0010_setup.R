@@ -45,7 +45,7 @@
   
   # max_cores-----
   
-  use_cores <- if(parallel::detectCores() < max_cores) parallel::detectCores() - 1 else max_cores
+  settings$use_cores <- if(parallel::detectCores() < max_cores) parallel::detectCores() - 1 else max_cores
 
 
   # packages------
@@ -109,10 +109,8 @@
   
   # functions------
   
-  safe_source <- purrr::safely(source)
-  
   purrr::walk(fs::dir_ls("function")
-              , safe_source
+              , source
               )
   
   
@@ -129,7 +127,7 @@
   
   # Sys.setenv(AWS_NO_SIGN_REQUEST = "YES")
   
-  gdalcubes::gdalcubes_options(parallel = max_cores)
+  gdalcubes::gdalcubes_options(parallel = settings$use_cores)
   
   # see https://gdalcubes.github.io/source/concepts/config.html
   gdalcubes::gdalcubes_set_gdal_config("VSI_CACHE", "TRUE")
@@ -140,7 +138,7 @@
   gdalcubes::gdalcubes_set_gdal_config("GDAL_DISABLE_READDIR_ON_OPEN","EMPTY_DIR")
   gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_VERSION","2")
   gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES","YES")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", as.character(max_cores))
+  gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", as.character(settings$use_cores))
   
   # stop extra little files being written
     # see https://gis.stackexchange.com/questions/427923/preventing-terra-from-writing-auxiliary-files-when-writing-to-disc
@@ -284,25 +282,12 @@
   
   if(!file.exists(out_file)) {
     
-    max_res <- max(unlist(settings[grep("res", names(settings))]))
-    
-    settings$base <- terra::rast(extent = terra::ext(settings$boundary %>%
-                                                       sf::st_buffer(max_res)
-                                                     ) %>%
-                                   round(-3)
-                                 , crs = terra::crs(settings$boundary)
-                                 , resolution = settings$sat_res
-                                 , vals = 1
-                                 , names = "sa"
-                                 ) %>%
-      terra::mask(terra::vect(settings$boundary))
-    
-    terra::writeRaster(settings$base
-                       , out_file
-                       , datatype = "INT1U"
-                       , gdal = c("COMPRESS = NONE")
-                       , overwrite = TRUE
-                       )
+    settings$base <- make_base_grid(settings$boundary
+                                    , base_res = settings$sat_res
+                                    , base_epsg = settings$epsg_proj
+                                    , use_mask = clip
+                                    , out_file = out_file
+                                    )
    
     
   } else settings$base <- terra::rast(out_file)
@@ -312,12 +297,6 @@
     
   # projected
   settings$bbox_use_epsg <- sf::st_bbox(settings$base)
-
-  settings$use_extent <- list(left = settings[["bbox_use_epsg", exact = TRUE]]["xmin"][[1]]
-                              , right = settings[["bbox_use_epsg", exact = TRUE]]["xmax"][[1]]
-                              , top = settings[["bbox_use_epsg", exact = TRUE]]["ymax"][[1]]
-                              , bottom = settings[["bbox_use_epsg", exact = TRUE]]["ymin"][[1]]
-                              )
   
   # geographic
   settings$bbox <- settings$bbox_use_epsg %>%

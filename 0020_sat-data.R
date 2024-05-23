@@ -36,23 +36,9 @@
   
   # make cube ------
   
-  sat_sets <- c(settings[c("use_extent"
-                           , "epsg_proj"
-                           , "sat_collection"
-                           , "bbox"
-                           , "sat_res"
-                           , "period"
-                           )]
-                , out_dir = settings$sat_seas_cube_dir
-                )
-  
-  ## run? ------
-  
   n_files <- nrow(sat_stacks) * (length(settings$sat_layers) + length(settings$sat_indices))
   done_files <- length(fs::dir_ls(settings$sat_seas_cube_dir, regexp = "\\.tif$"))
   run <- done_files < n_files
-  
-  safe_get_sat_data <- purrr::safely(get_sat_data)
   
   while(run) {
     
@@ -63,17 +49,28 @@
                       , sat_stacks$end_date
                       , sat_stacks$season
                       )
-                 , \(x, y, z) safe_get_sat_data(x
-                                                , y
-                                                , z
-                                                , sat_sets = sat_sets
-                                                , layers = settings$sat_layers
-                                                , indices = settings$sat_indices
-                                                
-                                                # dots
-                                                , property_filter = \(x) {x[["eo:cloud_cover"]] < 10}
-                                                )
-                 )
+                 , \(a, b, c) {
+                 
+                 make_sat_cube(settings$base
+                               , start_date = a #sat_stacks$start_date[[1]]
+                               , end_date = b #sat_stacks$end_date[[1]]
+                               , season = c #sat_stacks$season[[1]]
+                               , out_dir = settings$sat_seas_cube_dir
+                               , collections = settings$sat_collection
+                               , period = settings$period
+                               , layers = settings$sat_layers
+                               , indices = settings$sat_indices
+                               , mask = list(band = "oa_fmask", mask = c(2, 3))
+                               , chunks = c(1, 1)
+                               , chunk_dir = fs::path(data_dir, "raster", "sat_cube_temp")
+                               , chunk_prefix = "tile_"
+                               , sleep = 60
+                               , attempts = 5
+                               # dots
+                               , property_filter = \(x) {x[["eo:cloud_cover"]] < 10}
+                               )
+      }
+    )
     
     run <- length(fs::dir_ls(settings$sat_seas_cube_dir, regexp = "\\.tif$")) < n_files
     
