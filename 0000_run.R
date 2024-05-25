@@ -2,14 +2,14 @@
   settings <- list()
   
   # context
-  settings$vector <- "parks"
-  settings$filt_col <- "RESNAME"
-  settings$level <- "Murray River"
-  settings$buffer <- 2500
+  settings$vector <- "sa_ibrasub_xn"
+  settings$filt_col <- NULL
+  settings$level <- NULL
+  settings$buffer <- 0
 
   # context extra (not in)  
   settings$use_bbox <- FALSE
-  settings$use_clip <- NULL
+  settings$use_clip <- "aus_500m_buf"
   settings$use_clip_buffer <- 0
 
   
@@ -28,7 +28,7 @@
   run_to <- 90
   skips <- NULL
   
-  max_cores <- 10
+  max_cores <- 30
   
   envFunc::run(run_from, run_to, skips)
   
