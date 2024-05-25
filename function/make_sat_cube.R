@@ -22,11 +22,14 @@
                             , ... # passed to get_sat_data
                             ) {
     
-    message(start_date, " to ", end_date)
-    
     # capture args -------
     use_args <- c(as.list(environment()), list(...))
     use_args <- use_args[!grepl("base|out_dir|chunk|clean_temp", names(use_args))] # don't pass these to get_sat_data
+    
+    # stack_key ------
+    stack_key <- paste0(season, "__", start_date)
+    
+    message(stack_key)
     
     # expected out files ------
     expected_files <- tibble::tibble(out_file = c(layers, names(indices))
@@ -36,9 +39,7 @@
       dplyr::mutate(out_file = fs::path(out_dir
                                         , paste0(out_file
                                                  , "__"
-                                                 , season
-                                                 , "__"
-                                                 , start_date
+                                                 , stack_key
                                                  , ".tif"
                                                  )
                                         )
@@ -52,12 +53,12 @@
       
       # create chunks -------
       
-      fs::dir_create(chunk_dir)
+      fs::dir_create(fs::path(chunk_dir, stack_key))
       
       # makeTiles seems to deal with non-integer y, so values in chunk don't matter too much.
       chunks <- terra::makeTiles(base
                                  , y = c(terra::nrow(base) / chunks[1], terra::ncol(base) / chunks[2])
-                                 , filename = fs::path(chunk_dir, "tile_.tif")
+                                 , filename = fs::path(chunk_dir, stack_key, "tile_.tif")
                                  , na.rm = TRUE
                                  )
       
@@ -74,7 +75,7 @@
       tifs <- c(layers, names(indices)) %>%
         tibble::enframe(name = NULL, value = "layer") %>%
         dplyr::mutate(tifs = purrr::map(layer
-                                        , \(x) fs::dir_ls(chunk_dir
+                                        , \(x) fs::dir_ls(fs::path(chunk_dir, stack_key)
                                                           , regexp = paste0(x, "__.*tif$")
                                                           , recurse = 1
                                                           )

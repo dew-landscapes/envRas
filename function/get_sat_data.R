@@ -221,7 +221,7 @@
           counter <- counter + 1
           
           still_to_do <- check_success(out_dir
-                                       , still_to_do
+                                       , tif_name = still_to_do
                                        , removes = "nbart_"
                                        )
           
@@ -254,6 +254,8 @@
                          
                          out_file <- fs::path(out_dir
                                               , paste0(idx
+                                                       , "__"
+                                                       , season
                                                        , "__"
                                                        , start_date
                                                        , ".tif"
