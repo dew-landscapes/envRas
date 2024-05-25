@@ -10,7 +10,7 @@
       
     } else tif_name
     
-    errors <- fs::dir_ls(dir
+    success <- fs::dir_ls(dir
                             , regexp = paste0(use_tif_name, ".*log$", collapse = "|")
                             ) %>%
       tibble::enframe(name = NULL, value = "path") %>%
@@ -19,10 +19,18 @@
                     , log = purrr::map(log, \(x) paste0(x, collapse = "\n"))
                     , err = purrr::map_lgl(log, \(x) grepl("ERROR", x))
                     ) %>%
-      dplyr::filter(err) %>%
+      dplyr::filter(!err) %>%
       dplyr::pull(layer)
     
-    tif_name <- tif_name[grepl(paste0(errors, collapse = "|"), tif_name)]
+    tif_name <- if(length(success) == 0) {
+      
+      tif_name
+      
+    } else {
+      
+      tif_name[!grepl(paste0(success, collapse = "|"), tif_name)]
+      
+    }
     
     return(tif_name)
     
