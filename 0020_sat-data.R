@@ -68,7 +68,7 @@
                                  , layers = settings$sat_layers
                                  , indices = settings$sat_indices
                                  , mask = list(band = "oa_fmask", mask = c(2, 3))
-                                 , chunks = c(1, 1)
+                                 , chunks = settings$chunks
                                  , chunk_dir = fs::path(data_dir, "raster", "sat_cube_temp")
                                  , chunk_prefix = "tile_"
                                  , sleep = 60

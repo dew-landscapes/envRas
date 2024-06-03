@@ -26,6 +26,8 @@
                                , nbr2 = c("nir", "swir_2")
                                )
   
+  settings$chunks <- c(2, 2) # should lead to chunks[1] * chunks[2] tiles
+  
   ## climate -------
   settings$cli_source <- "NCI"
   settings$cli_collection <- "ANUClimate"
