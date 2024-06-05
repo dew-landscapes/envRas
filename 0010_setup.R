@@ -94,7 +94,7 @@
           , "knitr"
           , "rmarkdown"
           , "bookdown"
-          , "kableExtra"
+          #, "kableExtra"
         )
       )
     )

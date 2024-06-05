@@ -123,10 +123,10 @@ name_env_tif <- function(x
                       , source = if(!dir_only) basename(dirname(path)) else basename(path)
                       , file = if(!dir_only) file = basename(path) else NULL
                       ) %>%
-        tidyr::separate(context
-                        , into = context_defn
-                        , sep = "__"
-                        ) %>%
+        tidyr::separate_wider_delim(context
+                                    , names = context_defn
+                                    , delim = "__"
+                                    ) %>%
         tidyr::separate(cube
                         , into = cube_defn
                         , sep = "__"

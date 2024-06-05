@@ -65,11 +65,11 @@
       # get chunk data-------
       purrr::map(chunks
                  , \(chunk) do.call("get_sat_data"
-                                , args = c(x = chunk
-                                           , out_dir = fs::path(dirname(chunk), gsub("\\.tif", "", basename(chunk)))
-                                           , use_args
-                                           )
-                                )
+                                    , args = c(x = chunk
+                                               , out_dir = fs::path(dirname(chunk), gsub("\\.tif", "", basename(chunk)))
+                                               , use_args
+                                               )
+                                    )
                  )
       
       tifs <- c(layers, names(indices)) %>%
