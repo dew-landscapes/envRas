@@ -22,9 +22,7 @@ As per the `get_sat_data`, there is an equivalent `get_cli_data` function in the
 ```{r cliExampleFiles}
 
   cli_example_files <- files %>%
-    dplyr::filter(start_date == as.Date(start_date))
-
-
+    dplyr::filter(start_date == as.Date(start_date)) %>%
     dplyr::mutate(out_file = here::here("report", "out", "cli_example.tif"))
   
   cli_example_files$data[[1]]
@@ -35,11 +33,11 @@ Three files representing monthly rainfall for the summer of 2014 (December 2013 
 
 ```{r cliExampleGet, cache = TRUE}
   
-  purrr::pwalk(list(cli_example_files$data
-                    , cli_example_files$out_file
-                    , cli_example_files$func
-                    , cli_example_files$scale
-                    , cli_example_files$offset
+  purrr::pwalk(list(cli_example_files$data[[1]]
+                    , cli_example_files$out_file[[1]]
+                    , cli_example_files$func[[1]]
+                    , cli_example_files$scale[[1]]
+                    , cli_example_files$offset[[1]]
                     )
                , get_cli_data
                , base = settings$base
@@ -51,7 +49,7 @@ The `get_cli_data` function does the work of saving the resulting cube to the fi
 
 ```{r cliExampleMap, fig.cap = "Summer rain result from the call to `get_cli_data`"}
 
-  plot(terra::rast(cli_example_files$out_file))
+  plot(terra::rast(cli_example_files$out_file[[1]]))
 
 ```
 
@@ -101,11 +99,10 @@ Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from 
 
 ```{r cliCollectionTab}  
   
-  kableExtra::kbl(cli_layers %>%
+  knitr::kable(cli_layers %>%
                       dplyr::mutate(collection = gsub("--", " and ", collection))
                     , caption = "NCI collections and layers prepared by envRas"
-                    ) %>%
-    kableExtra::kable_styling()
+                    )
 
 ```
 
@@ -113,10 +110,9 @@ Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from 
 
 ```{r cliSeasonsTab}
 
-  kableExtra::kbl(cli_seasons
+  knitr::kable(cli_seasons
                     , caption = "Start and end dates defining seasons for preparing NCI layers"
-                    ) %>%
-    kableExtra::kable_styling()
+                    )
 
 ```
 
@@ -124,25 +120,14 @@ Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from 
 
 ```{r cliEpochCubeData}
 
-  cli_epoch_cube_dir <- if(dir.exists(gsub("P3M", "P10Y", settings$cli_seas_cube_dir))) {
-    
-    fs::dir_ls(gsub("P3M", "P10Y", settings$cli_seas_cube_dir))
-    
-  } else {
-  
-    fs::path("H:"
-             , "data"
-             , "raster"
-             , "aligned"
-             , "sa_ibrasub_xn____0__90"
-             )
-    
-  }
+  cli_epoch_cube_dir <- fs::path("H:", "data", "raster", "sa_ibrasub_xn______0")
 
-  cli_epoch_cube <- terra::rast(fs::dir_ls(cli_epoch_cube_dir, regexp = "tif$"))
+  cli_tifs <- name_env_tif(cli_epoch_cube_dir, parse = T) %>%
+    dplyr::filter(grepl("NCI", path))
 
-  cli_epoch_cube_data <- tibble::enframe(terra::sources(cli_epoch_cube), name = NULL, value = "path") %>%
-    name_env_tif(parse = TRUE) %>%
+  cli_epoch_cube <- terra::rast(cli_tifs$path)
+
+  cli_epoch_cube_data <- cli_tifs %>%
     dplyr::mutate(values = purrr::map(path, \(x) terra::values(terra::rast(x)))
                   , data = purrr::map(values, \(x) quibble(x, na.rm = TRUE))
                   , use_name = paste0(layer, " ", season)
@@ -160,33 +145,29 @@ Table \@ref(tab:cliEpochTab) shows a summary of the layers and layer values.
 
 ```{r cliEpochTab}
 
-  kableExtra::kbl(cli_epoch_cube_data %>%
-          dplyr::mutate(across(where(is.numeric), ~round(.x, 2))
-                        , iqr = paste0(q25
-                                     , " to "
-                                     , q75
-                                     )
-                        ) %>%
-          dplyr::select(layer
-                        , season
-                        , median = q50
-                        #, sd
-                        , `inter-quartile range` = iqr
-                        ) %>%
-          janitor::remove_empty(which = "cols")
-        , caption = paste0("Summary of "
-                           , unique(cli_epoch_cube_data$source)
-                           , " (collection "
-                           , unique(cli_epoch_cube_data$collection)
-                           , ") layers for the "
-                           , settings$name
-                           , " example area"
-                           )
-        ) %>%
-      kableExtra::kable_styling("striped") %>%
-      kableExtra::scroll_box(height = "500px"
-                              , fixed_thead = T
-                              )
+  knitr::kable(cli_epoch_cube_data %>%
+                 dplyr::mutate(across(where(is.numeric), ~round(.x, 2))
+                               , iqr = paste0(q25
+                                              , " to "
+                                              , q75
+                                              )
+                               ) %>%
+                 dplyr::select(layer
+                               , season
+                               , median = q50
+                               #, sd
+                               , `inter-quartile range` = iqr
+                               ) %>%
+                 janitor::remove_empty(which = "cols")
+               , caption = paste0("Summary of "
+                                  , unique(cli_epoch_cube_data$source)
+                                  , " (collection "
+                                  , unique(cli_epoch_cube_data$collection)
+                                  , ") layers for the "
+                                  , settings$name
+                                  , " example area"
+                                  )
+               )
 
 ```
 

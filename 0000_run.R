@@ -2,10 +2,10 @@
   settings <- list()
   
   # context
-  settings$vector <- "sa_ibrasub_xn"
-  settings$filt_col <- NULL
-  settings$level <- NULL
-  settings$buffer <- 0
+  settings$vector <- "parks"
+  settings$filt_col <- "RESNAME"
+  settings$level <- "Bakara"
+  settings$buffer <- 2500
 
   # context extra (not in)  
   settings$use_bbox <- FALSE
@@ -26,7 +26,7 @@
   
   run_from <- 0
   run_to <- 90
-  skips <- NULL
+  skips <- c("static", 5000, "90m")
   
   max_cores <- 10
   

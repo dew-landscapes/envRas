@@ -5,7 +5,7 @@
 
 ```{r packages}
 
-  kableExtra::kbl(tibble(package = packages) %>%
+  knitr::kable(tibble(package = packages) %>%
                       dplyr::mutate(citation = purrr::map_chr(package
                                                               , cite_package
                                                               , brack = FALSE
@@ -23,8 +23,7 @@
                                        , cite_package("base")
                                        , " packages used in the production of this report"
                                        )
-                    ) %>%
-    kableExtra::kable_styling()
+                    )
 
 ```
 
@@ -59,8 +58,7 @@
 
   sat_seas_cube_details %>%
     dplyr::select(period, res, layer, season, start_date, scale, offset, type, no_data, epsg) %>%
-    kableExtra::kbl(caption = paste0("Satellite seasonal cube data as at: ", format(Sys.Date(), "%d-%B-%Y")))  %>%
-  kableExtra::kable_styling(font_size = 10)
+    knitr::kable(caption = paste0("Satellite seasonal cube data as at: ", format(Sys.Date(), "%d-%B-%Y")))
 
 ```
 
@@ -77,12 +75,11 @@
                   , epsg = purrr::map_dbl(desc, \(x) get_att(x, "stac", "`proj:epsg`"))
                   ) %>%
     dplyr::select(period, res, layer, season, start_date, scale, offset, type, no_data) %>%
-    kableExtra::kbl(caption = paste0("Satellite seaonal epoch cube data as at: "
+    knitr::kable(caption = paste0("Satellite seaonal epoch cube data as at: "
                                        , format(Sys.Date()
                                                 , "%d-%B-%Y"
                                                 )
                                        )
-                      ) %>%
-    kableExtra::kable_styling(font_size = 10)
+                      )
 
 ```
