@@ -18,7 +18,7 @@
   
   
 
-  files <- settings[["seasons", exact = TRUE]]$months %>%
+  cli_files <- settings[["seasons", exact = TRUE]]$months %>%
     dplyr::cross_join(cli_layers) %>%
     dplyr::mutate(file_specific = format(start_date, "%Y%m")
                   , file = paste0(base_url
@@ -52,11 +52,11 @@
                   )
   
   
-  purrr::pwalk(list(files$data[!files$done]
-                    , files$out_file[!files$done]
-                    , files$func[!files$done]
-                    , files$scale[!files$done]
-                    , files$offset[!files$done]
+  purrr::pwalk(list(cli_files$data[!cli_files$done]
+                    , cli_files$out_file[!cli_files$done]
+                    , cli_files$func[!cli_files$done]
+                    , cli_files$scale[!cli_files$done]
+                    , cli_files$offset[!cli_files$done]
                     )
                , get_cli_data
                , base = settings$base

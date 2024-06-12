@@ -1,20 +1,26 @@
   
-  get_cli_data <- function(urls_df
+  get_cli_data <- function(files
                            , out_file
                            , func
-                           , base
                            , scale
                            , offset
+                           , base
                            , force_new = FALSE
                            ) {
     
     run <- if(file.exists(out_file)) force_new else TRUE
     
     if(run) {
+      
+      if("data.frame" %in% class(files)) {
+        
+        files <- files[,1][[1]]
+        
+      }
         
       safe_nc <- purrr::safely(stars::read_ncdf)
       
-      r <- purrr::map(urls_df$file
+      r <- purrr::map(files
                       , safe_nc
                       , proxy = TRUE
                       ) %>%
