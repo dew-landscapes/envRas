@@ -15,4 +15,5 @@ cache*
 test.R
 packages.bib
 common/
+envRas.Rmd
 _*
