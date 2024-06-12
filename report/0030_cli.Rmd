@@ -21,7 +21,7 @@ As per the `get_sat_data`, there is an equivalent `get_cli_data` function in the
 
 ```{r cliExampleFiles}
 
-  cli_example_files <- files %>%
+  cli_example_files <- cli_files %>%
     dplyr::filter(start_date == as.Date(start_date)) %>%
     dplyr::mutate(out_file = here::here("report", "out", "cli_example.tif"))
   
@@ -40,7 +40,7 @@ Three files representing monthly rainfall for the summer of 2014 (December 2013 
                     , cli_example_files$offset[[1]]
                     )
                , get_cli_data
-               , base = settings$base
+               , base = base_grid
                )
   
 ```
