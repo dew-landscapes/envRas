@@ -5,5 +5,15 @@
 .Rdata
 .httr-oauth
 .DS_Store
-out*
+out/
+report/report*
+report/images*
+report/envRas.Rmd
+*_book/
+samples_
+cache*
 test.R
+packages.bib
+common/
+envRas.Rmd
+_*
