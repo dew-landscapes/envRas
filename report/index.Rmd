@@ -96,3 +96,39 @@ description: R code to generate environmental rasters
 # Aim {-}
 
 This goal of `envRas` is to create analysis ready raster data for a specific area.
+
+```{r data}
+
+  epoch_dirs <- c(gsub("P3M", "P10Y", settings$sat_seas_cube_dir)
+                  , gsub("P3M__1000", "P10Y__90", settings$cli_seas_cube_dir)
+                  )
+
+  epoch_cube_data <- name_env_tif(epoch_dirs[1]
+                                  , parse = TRUE
+                                  ) %>%
+    dplyr::bind_rows(name_env_tif(epoch_dirs[2]
+                                  , parse = TRUE
+                                  )
+                     ) %>%
+    dplyr::left_join(envRaster::ras_layers %>%
+                       dplyr::select(layer, description, indicates)
+                     ) %>%
+    dplyr::mutate(values = purrr::map(path
+                                      , \(x) terra::values(terra::rast(x))
+                                      )
+                  , data = purrr::map(values, \(x) quibble(x, na.rm = TRUE))
+                  , use_name = paste0(layer, " ", season)
+                  , layerid = gsub("[[:punct:]]", "", layer)
+                  , season = factor(season
+                                    , levels = unique(settings$seasons$luseasons$season)
+                                    , ordered = TRUE
+                                    )
+                  ) %>%
+    tidyr::unnest(cols = c(data))
+  
+  epoch_cube <- terra::rast(epoch_cube_data$path)
+  
+  names(epoch_cube) <- epoch_cube_data$use_name
+
+
+```

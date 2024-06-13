@@ -57,43 +57,36 @@ The `get_cli_data` function does the work of saving the resulting cube to the fi
 
 ```{r cliSeasonalCubeData}
 
-  cli_seas_cube_dir <- fs::path("H:"
-                                , "data"
-                                , 'raster'
-                                , "cube__P3M"
-                                , "NCI__ANUClimate__sa_ibrasub_xn____0"
-                                )
+  cli_seas_cube_data <- name_env_tif(settings$cli_seas_cube_dir
+                                , parse = TRUE
+                                ) %>%
+    dplyr::filter(source == "NCI")
 
-  cli_seas_cube <- parse_env_tif(cli_seas_cube_dir
-                           , parse = TRUE
-                           ) %>%
-    dplyr::filter(source == "NCI") %>%
-    dplyr::mutate(start_date = as.Date(start_date))
-
-  cli_layers <- cli_seas_cube %>%
-    dplyr::select(source, collection, band) %>%
-    dplyr::distinct()
-
-  cli_seasons <- settings$epochs %>%
-    tidyr::unnest(cols = c(years)) %>%
-    dplyr::rename(year = years) %>%
-    dplyr::left_join(settings$seasons$seasons) %>%
-    dplyr::inner_join(cli_seas_cube) %>%
-    dplyr::select(year, epoch, season, start_date, end_date) %>%
-    dplyr::distinct()
-
+  cli_layers <- cli_seas_cube_data  %>%
+    tidyr::separate_longer_delim(collection, "--") %>%
+    dplyr::left_join(ras_collection) %>%
+    dplyr::mutate(start_date = as.Date(start_date)
+                  , collection_md = paste0("[", collection, "](", coll_url, ")")
+                  ) %>%
+    dplyr::group_by(source, season) %>%
+    dplyr::summarise(collection = stringr::str_flatten_comma(unique(collection_md))
+                     , starts = stringr::str_flatten_comma(unique(start_date))
+                     , layers = stringr::str_flatten_comma(unique(layer))
+                     ) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(source, collection, season, starts, layers)
+  
 ```
 
-Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from NCI data for each of the seasons in Table \@ref(tab:cliSeasonsTab). This created a regular cube of `r nrow(cli_seas_cube)` files made up of `r nrow(cli_layers)` layers with seasonal data for each of `r nrow(cli_seasons)` seasons. This seasonal cube had the following parameters:
+Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from NCI data for each of the seasons in Table \@ref(tab:cliSeasonsTab). This created a regular cube of `r nrow(cli_seas_cube_data)` files made up of `r length(unique(cli_seas_cube_data$layer))` layers with seasonal data for each of `r length(unique(cli_seas_cube_data$season))` seasons in `r length(unique(year(cli_seas_cube_data$start_date)))` years. This seasonal cube had the following parameters:
 
-* start date: `r min(cli_seasons$start_date)`
-* end date: `r max(cli_seasons$end_date)`
+* first time period: `r min(cli_seas_cube_data$start_date)`
+* last time period: `r max(cli_seas_cube_data$start_date)`
 * period (in [ISO-8601 duration](https://www.digi.com/resources/documentation/digidocs/90001488-13/reference/r_iso_8601_duration_format.htm) format): `r settings$period`
 * x and y distance: `r settings$cli_res` m
-* seasons: `r cli_seasons$season %>% unique %>% vec_to_sentence`
+* seasons: `r cli_seas_cube_data$season %>% unique %>% vec_to_sentence`
 * December data summarized into following year. e.g. December 2019 data will appear in the summer 2020 layer
 
-[Appendix][appendices] Table \@ref(tab:cliSeasCubeApp) lists details for each of the existing layers in the seasonal cube.
 
 <br>
 
@@ -106,36 +99,12 @@ Table \@ref(tab:cliCollectionTab) shows the collection and layers prepared from 
 
 ```
 
-<br>
-
-```{r cliSeasonsTab}
-
-  knitr::kable(cli_seasons
-                    , caption = "Start and end dates defining seasons for preparing NCI layers"
-                    )
-
-```
-
 ## Climate epoch cube
 
 ```{r cliEpochCubeData}
 
-  cli_epoch_cube_dir <- fs::path("H:", "data", "raster", "sa_ibrasub_xn______0")
-
-  cli_tifs <- name_env_tif(cli_epoch_cube_dir, parse = T) %>%
+  cli_epoch_cube_data <- epoch_cube_data %>%
     dplyr::filter(grepl("NCI", path))
-
-  cli_epoch_cube <- terra::rast(cli_tifs$path)
-
-  cli_epoch_cube_data <- cli_tifs %>%
-    dplyr::mutate(values = purrr::map(path, \(x) terra::values(terra::rast(x)))
-                  , data = purrr::map(values, \(x) quibble(x, na.rm = TRUE))
-                  , use_name = paste0(layer, " ", season)
-                  , layerid = gsub("[[:punct:]]", "", layer)
-                  ) %>%
-    tidyr::unnest(cols = c(data))
-  
-  names(cli_epoch_cube) <- cli_epoch_cube_data$use_name
 
 ```
 
@@ -158,7 +127,8 @@ Table \@ref(tab:cliEpochTab) shows a summary of the layers and layer values.
                                #, sd
                                , `inter-quartile range` = iqr
                                ) %>%
-                 janitor::remove_empty(which = "cols")
+                 janitor::remove_empty(which = "cols") %>%
+                 dplyr::arrange(layer, season)
                , caption = paste0("Summary of "
                                   , unique(cli_epoch_cube_data$source)
                                   , " (collection "
@@ -182,7 +152,7 @@ Table \@ref(tab:cliEpochTab) shows a summary of the layers and layer values.
     this_layer <- i
     
     cli_layer_rmd = c(cli_layer_rmd
-                      , knitr::knit_expand(here::here("report", "child", "cli_layer_rmd.Rmd"))
+                      , knitr::knit_expand(here::here("report", "child", "layer_rmd.Rmd"))
                       )
     
   }
