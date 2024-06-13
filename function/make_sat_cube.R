@@ -91,6 +91,8 @@
                      , tifs$tifs
                      , \(x, y) {
                        
+                       tif_dir <- unique(dirname(y))
+                       
                        r <- terra::vrt(y)
                        
                        scale <- terra::scoff(terra::rast(y[[1]]))[[1]]
@@ -111,6 +113,36 @@
                                             , gdal = c("COMPRESS = NONE")
                                             , overwrite = TRUE
                                             )
+                         
+                          # write log ------
+                          logs <- tibble::tibble(path = fs::dir_ls(tif_dir
+                                                                   , regexp = paste0(season, "__", start_date, ".*log$")
+                                                                   , recurse = TRUE
+                                                                   )
+                                                 ) %>%
+                            dplyr::mutate(layer = gsub("\\.log", "", basename(path))
+                                          , tile = basename(dirname(path))
+                                          , result = purrr::map(path, \(x) readr::read_lines(x))
+                                          ) %>%
+                            tidyr::unnest(cols = c(result)) %>%
+                            dplyr::filter(grepl("100|ERROR", result)) %>%
+                            dplyr::distinct() %>%
+                            dplyr::mutate(result = dplyr::case_when(grepl("ERROR", result) ~ gsub("\n", "", result)
+                                                                    , grepl("100", result) ~ "success"
+                                                                    , TRUE ~ result
+                                                                    )
+                                          ) %>%
+                            dplyr::arrange(layer, tile)
+                          
+                          rio::export(logs
+                                      , file = fs::path(out_dir, paste0(season, "__", start_date, "__log.csv"))
+                                      )
+                         
+                         if(clean_temp) {
+                           
+                           fs::dir_delete(tif_dir)
+                           
+                         }
                            
                          
                        }
@@ -121,36 +153,6 @@
                       
                      }
                      )
-        
-        # write log ------
-        logs <- tibble::tibble(path = fs::dir_ls(chunk_dir
-                                                 , regexp = paste0(season, "__", start_date, ".*log$")
-                                                 , recurse = TRUE
-                                                 )
-                               ) %>%
-          dplyr::mutate(layer = gsub("\\.log", "", basename(path))
-                        , tile = basename(dirname(path))
-                        , result = purrr::map(path, \(x) readr::read_lines(x))
-                        ) %>%
-          tidyr::unnest(cols = c(result)) %>%
-          dplyr::filter(grepl("100|ERROR", result)) %>%
-          dplyr::distinct() %>%
-          dplyr::mutate(result = dplyr::case_when(grepl("ERROR", result) ~ gsub("\n", "", result)
-                                                  , grepl("100", result) ~ "success"
-                                                  , TRUE ~ result
-                                                  )
-                        ) %>%
-          dplyr::arrange(layer, tile)
-        
-        rio::export(logs
-                    , file = fs::path(out_dir, paste0(season, "__", start_date, "__log.csv"))
-                    )
-        
-        if(clean_temp) {
-          
-          fs::dir_delete(chunk_dir)
-          
-        }
         
       } else {
         

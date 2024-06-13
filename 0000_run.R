@@ -2,9 +2,9 @@
   settings <- list()
   
   # context
-  settings$vector <- "parks"
-  settings$filt_col <- "RESNAME"
-  settings$level <- "Bakara"
+  settings$vector <- "lsa"
+  settings$filt_col <- "LSA"
+  settings$level <- "KI"
   settings$buffer <- 2500
 
   # context extra (not in)  
@@ -18,8 +18,9 @@
   #settings$use_res <- 30 # now set as settings$sat_res etc.
   
   # comms settings-------
-  make_book <- settings$level == "Bakara" # only make report on a small area!
+  make_book <- settings$level == "KI" # only make report on a small area!
   do_sat_summary <- TRUE
+  do_cli_summary <- TRUE
   
   
   #----------RUN---------
@@ -28,7 +29,7 @@
   run_to <- 90
   skips <- c("static", 5000, "90m")
   
-  max_cores <- 10
+  max_cores <- 2
   
   envFunc::run(run_from, run_to, skips)
   

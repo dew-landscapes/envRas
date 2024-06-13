@@ -70,41 +70,36 @@ Figure \@ref(fig:examplePlot) shows the Normalized Difference Vegetation Index (
 
 ## Satellite seasonal cube
 
-```{r satSeasonalCubeData}
+```{r satSeasCube}
 
-  sat_seas_cube_dir <- fs::path("I:"
-                                , "sa_ibrasub_xn______0"
-                                , "P3M__30"
-                                , "DEA__ga_ls8c_ard_3--ga_ls9c_ard_3"
-                                )
+  sat_seas_cube_data <- name_env_tif(settings$sat_seas_cube_dir
+                                , parse = TRUE
+                                ) %>%
+    dplyr::filter(source == "DEA")
 
-  sat_seas_cube <- name_env_tif(sat_seas_cube_dir
-                           , parse = TRUE
-                           ) %>%
-    dplyr::filter(source == "DEA") %>%
-    dplyr::mutate(start_date = as.Date(start_date))
-
-  sat_layers <- sat_seas_cube %>%
-    dplyr::select(source, collection, layer) %>%
-    dplyr::distinct()
-
-  sat_seasons <- settings$epochs %>%
-    tidyr::unnest(cols = c(years)) %>%
-    dplyr::rename(year = years) %>%
-    dplyr::left_join(settings$seasons$seasons) %>%
-    dplyr::inner_join(sat_seas_cube) %>%
-    dplyr::select(year, epoch, season, start_date, end_date) %>%
-    dplyr::distinct()
+  sat_layers <- sat_seas_cube_data  %>%
+    tidyr::separate_longer_delim(collection, "--") %>%
+    dplyr::left_join(ras_collection) %>%
+    dplyr::mutate(start_date = as.Date(start_date)
+                  , collection_md = paste0("[", collection, "](", coll_url, ")")
+                  ) %>%
+    dplyr::group_by(source, season) %>%
+    dplyr::summarise(collection = stringr::str_flatten_comma(unique(collection_md))
+                     , starts = stringr::str_flatten_comma(unique(start_date))
+                     , layers = stringr::str_flatten_comma(unique(layer))
+                     ) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(source, collection, season, starts, layers)
 
 ```
 
-Table \@ref(tab:satCollectionTab) shows the collection and layers prepared from DEA data for each of the seasons in Table \@ref(tab:satSeasonsTab). This created a regular cube of `r nrow(sat_seas_cube)` files made up of `r nrow(sat_layers)` layers with seasonal data for each of `r nrow(sat_seasons)` seasons. This seasonal cube had the following parameters:
+Table \@ref(tab:satCollectionTab) shows the collection, layers and time periods prepared from DEA data for the seasonal cube. This created a regular cube of `r nrow(sat_seas_cube_data)` files made up of `r length(unique(sat_seas_cube_data$layer))` layers with seasonal data for each of `r length(unique(sat_seas_cube_data$season))` seasons in `r length(unique(year(sat_seas_cube_data$start_date)))` years. This seasonal cube had the following parameters:
 
-* start date: `r min(sat_seasons$start_date)`
-* end date: `r max(sat_seasons$end_date)`
+* first time period: `r min(sat_seas_cube_data$start_date)`
+* last time period: `r max(sat_seas_cube_data$start_date)`
 * period (in [ISO-8601 duration](https://www.digi.com/resources/documentation/digidocs/90001488-13/reference/r_iso_8601_duration_format.htm) format): `r settings$period`
 * x and y distance: `r settings$sat_res` m
-* seasons: `r sat_seasons$season %>% unique %>% vec_to_sentence`
+* seasons: `r sat_seas_cube_data$season %>% unique %>% vec_to_sentence`
 * December data summarized into following year. e.g. December 2019 data will appear in the summer 2020 layer
 
 [Appendix][appendices] Table \@ref(tab:satSeasCubeApp) lists details for each of the existing layers in the seasonal cube.
@@ -113,58 +108,22 @@ Table \@ref(tab:satCollectionTab) shows the collection and layers prepared from 
 
 ```{r satCollectionTab}  
   
-  knitr::kable(sat_layers %>%
-                 dplyr::mutate(collection = gsub("--", " and ", collection))
+  knitr::kable(sat_layers
                , caption = "DEA collections and layers prepared by envRas"
-               )
-
-```
-
-<br>
-
-```{r satSeasonsTab}
-
-  knitr::kable(sat_seasons
-               , caption = "Start and end dates defining seasons for preparing DEA layers"
                )
 
 ```
 
 ## Satellite epoch cube
 
-```{r satEpochCubeData}
+```{r satEpochCube}
 
-  sat_epoch_cube_dir <- if(dir.exists(gsub("P3M", "P10Y", settings$sat_seas_cube_dir))) {
-    
-    fs::dir_ls(gsub("P3M", "P10Y", settings$sat_seas_cube_dir))
-    
-  } else {
-  
-    fs::path("H:"
-             , "data"
-             , "raster"
-             , "aligned"
-             , "sa_ibrasub_xn____0__30"
-             )
-    
-  }
-
-  sat_epoch_cube <- terra::rast(sat_epoch_cube_dir)
-
-  sat_epoch_cube_data <- tibble::enframe(terra::sources(sat_epoch_cube), name = NULL, value = "path") %>%
-    name_env_tif(parse = TRUE) %>%
-    dplyr::mutate(values = purrr::map(path, \(x) terra::values(terra::rast(x)))
-                  , data = purrr::map(values, \(x) quibble(x))
-                  , use_name = paste0(layer, " ", season)
-                  , layerid = gsub("[[:punct:]]", "", layer)
-                  ) %>%
-    tidyr::unnest(cols = c(data))
-  
-  names(sat_epoch_cube) <- sat_epoch_cube_data$use_name
+  sat_epoch_cube_data <- epoch_cube_data %>%
+    dplyr::filter(grepl("DEA", source))
 
 ```
 
-A cube with `r settings$epoch_period`-year epochs, was then generated from the [seasonal cube]. The epoch cube had the same parameters as the seasonal cube, except that the period was `P10Y` instead of `P3M`. Note that, say, summer, in the `r settings$epoch_period`-year epoch cube took the median values for each summer image in the seasonl cube.
+A cube with `r settings$epoch_period`-year epochs, was then generated from the [seasonal cube][satellite seasonal cube]. The epoch cube had the same parameters as the seasonal cube, except that the period was `P10Y` instead of `P3M`. Note that, say, summer, in the `r settings$epoch_period`-year epoch cube took the median values for each summer image in the seasonal cube.
 
 Table \@ref(tab:satEpochTab) shows a summary of the layers and layer values.
 
@@ -208,7 +167,7 @@ Table \@ref(tab:satEpochTab) shows a summary of the layers and layer values.
     this_layer <- i
     
     sat_layer_rmd = c(sat_layer_rmd
-                      , knitr::knit_expand(here::here("report", "child", "sat_layer_rmd.Rmd"))
+                      , knitr::knit_expand(here::here("report", "child", "layer_rmd.Rmd"))
                       )
     
   }

@@ -1,15 +1,16 @@
-```{r satEpoch{{this_layer}}}
+```{r epoch{{this_layer}}}
 
   this_layerid <- "{{this_layer}}"
 
 ```
 
-```{r satEpochData{{this_layer}}}
+```{r epochData{{this_layer}}}
 
-  layer_dat <- sat_epoch_cube_data %>%
+  layer_dat <- epoch_cube_data %>%
     dplyr::filter(layerid == this_layerid)
 
   this_layer <- unique(layer_dat$layer)
+  this_desc <- unique(layer_dat$description)
 
   layer_sentence <- paste0(
     "There"
@@ -21,20 +22,20 @@
     , this_layer
     , " "
     , if(nrow(layer_dat) > 1) "layers" else "layer"
-    , " in the satellite epoch cube: \n\n* "
+    , " in the epoch cube: \n\n* "
     , paste0(basename(layer_dat$path), collapse = "\n* ")
   )
   
 ```
 
 
-### `r stringr::str_to_sentence(this_layer)`
+### `r paste0(stringr::str_to_sentence(this_layer), ": ", this_desc)`
 
 `r layer_sentence`
 
-Figure \@ref(fig:satEpochHist{{this_layer}}) shows the distribution of values in each `r this_layer` layer. Figure \@ref(fig:satEpochMap{{this_layer}}) shows maps for each `r this_layer` layer.
+Figure \@ref(fig:epochHist{{this_layer}}) shows the distribution of values in each `r this_layer` layer. Figure \@ref(fig:epochMap{{this_layer}}) shows maps for each `r this_layer` layer.
 
-```{r satEpochHist{{this_layer}}, fig.cap = paste0("Distribution of values in ", this_layer)}
+```{r epochHist{{this_layer}}, fig.cap = paste0("Distribution of values in ", this_layer)}
 
   hist_data <- layer_dat %>%
     tidyr::unnest(cols = c(values))
@@ -53,9 +54,9 @@ Figure \@ref(fig:satEpochHist{{this_layer}}) shows the distribution of values in
 
 ```
 
-```{r satEpochMap{{this_layer}}, fig.cap = paste0("Map of ", this_layer), fig.asp = 0.62}
+```{r epochMap{{this_layer}}, fig.cap = paste0("Map of ", this_layer), fig.asp = 0.62}
 
-  r <- sat_epoch_cube[[grepl(paste0(this_layer, " "), names(sat_epoch_cube))]]
+  r <- epoch_cube[[grepl(paste0(this_layer, " "), names(epoch_cube))]]
 
   names(r) <- gsub(paste0(this_layer, " "), "", names(r))
   
