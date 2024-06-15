@@ -38,52 +38,49 @@
   
   n_files <- nrow(sat_stacks) * (length(settings$sat_layers) + length(settings$sat_indices))
   done_files <- length(fs::dir_ls(settings$sat_seas_cube_dir, regexp = "\\.tif$"))
-  run <- done_files < n_files
+  counter <- 0
   
-  
-  message("expect ", n_files, " files in ", settings$sat_seas_cube_dir)
+  message("expect ", n_files, " files in ", settings$sat_seas_cube_dir, "\n  ", done_files, " already done")
   
   ## run cube -----
-  capture.output(
-      
-    # Warning (from ?sink (linked from capture.output))
-      # Do not sink the messages stream unless you understand the source code implementing it and hence the pitfalls.
-      
-    {
-      message("cube log: ", Sys.time())
+  
+  while(any(done_files < n_files, counter > 5)) {
+
+    purrr::pwalk(list(sat_stacks$start_date
+                      , sat_stacks$end_date
+                      , sat_stacks$season
+                      )
+                 , \(a, b, c) {
+                 
+                 make_sat_cube(settings$base
+                               , start_date = a #sat_stacks$start_date[[1]]
+                               , end_date = b #sat_stacks$end_date[[1]]
+                               , season = c #sat_stacks$season[[1]]
+                               , out_dir = settings$sat_seas_cube_dir
+                               , collections = settings$sat_collection
+                               , period = settings$period
+                               , layers = settings$sat_layers
+                               , indices = settings$sat_indices
+                               , mask = list(band = "oa_fmask", mask = c(2, 3))
+                               , chunks = settings$chunks
+                               , chunk_dir = fs::path(data_dir, "raster", "sat_cube_temp")
+                               , chunk_prefix = "tile_"
+                               , sleep = 60
+                               , attempts = 5
+                               # dots
+                               , property_filter = \(x) {x[["eo:cloud_cover"]] < 50}
+                               )
+      }
+    )
     
-      purrr::pwalk(list(sat_stacks$start_date
-                        , sat_stacks$end_date
-                        , sat_stacks$season
-                        )
-                   , \(a, b, c) {
-                   
-                   make_sat_cube(settings$base
-                                 , start_date = a #sat_stacks$start_date[[1]]
-                                 , end_date = b #sat_stacks$end_date[[1]]
-                                 , season = c #sat_stacks$season[[1]]
-                                 , out_dir = settings$sat_seas_cube_dir
-                                 , collections = settings$sat_collection
-                                 , period = settings$period
-                                 , layers = settings$sat_layers
-                                 , indices = settings$sat_indices
-                                 , mask = list(band = "oa_fmask", mask = c(2, 3))
-                                 , chunks = settings$chunks
-                                 , chunk_dir = fs::path(data_dir, "raster", "sat_cube_temp")
-                                 , chunk_prefix = "tile_"
-                                 , sleep = 60
-                                 , attempts = 1
-                                 # dots
-                                 , property_filter = \(x) {x[["eo:cloud_cover"]] < 10}
-                                 )
-        }
-      )
-    }
-     
-    , file = fs::path(settings$sat_seas_cube_dir, "cube.log")
-    , type = "message"
-    , append = TRUE
-  )
+    counter <- counter + 1
+    done_files <- length(fs::dir_ls(settings$sat_seas_cube_dir, regexp = "\\.tif$"))
+    
+    message("expect ", n_files, " files in ", settings$sat_seas_cube_dir
+            , "\n  ", done_files, " already done. counter = ", counter
+            )
+    
+  }
   
   
   # cube results ------

@@ -228,7 +228,7 @@
           message("counter: ", counter
                   , ". "
                   , out_dir
-                  , ". layers still to do: "
+                  , ". layers with errors: "
                   , vec_to_sentence(still_to_do)
                   )
           
@@ -326,7 +326,7 @@
                                        )
           
           message("counter: ", counter
-                  , ". layers still to do: "
+                  , ". layers with errors: "
                   , vec_to_sentence(still_to_do)
                   )
           
