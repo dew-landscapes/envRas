@@ -140,10 +140,13 @@
                          
                          if(clean_temp) {
                            
-                           fs::dir_delete(tif_dir)
+                           if(file.exists(out_file)) {
+                             
+                             fs::file_delete(y)
+                             
+                           }
                            
                          }
-                           
                          
                        }
                        
