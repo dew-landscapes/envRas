@@ -127,12 +127,12 @@ This goal of `envRas` is to create analysis ready raster data for a specific are
                                     , ordered = TRUE
                                     )
                   ) %>%
+    dplyr::arrange(source, season) %>%
     tidyr::unnest(cols = c(data))
   
   epoch_cube <- terra::rast(epoch_cube_data$path) %>%
     terra::mask(mask = settings$boundary)
   
   names(epoch_cube) <- epoch_cube_data$use_name
-
 
 ```
