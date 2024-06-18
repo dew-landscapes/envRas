@@ -100,13 +100,13 @@
       
       if(length(items)) {
         
-        layers <- items %>%
+        needed_layers <- items %>%
           rstac::items_assets() %>%
           grep(paste0(unique(c(layers, unname(unlist(indices)))), collapse = "$|"), ., value = TRUE) %>%
           grep("nbar_", ., value = TRUE, invert = TRUE)
         
         col <- gdalcubes::stac_image_collection(items$features
-                                                , asset_names = c(layers, mask$band)
+                                                , asset_names = c(needed_layers, mask$band)
                                                 , ...
                                                 )
         
@@ -267,8 +267,8 @@
                          if(run) {
                          
                            # this deals with 'nbart_' 
-                           x[[1]] <- grep(x[[1]], layers, value = TRUE)
-                           x[[2]] <- grep(x[[2]], layers, value = TRUE)
+                           x[[1]] <- grep(x[[1]], needed_layers, value = TRUE)
+                           x[[2]] <- grep(x[[2]], needed_layers, value = TRUE)
                            
                            r <- gdalcubes::raster_cube(col
                                                        , v_num
