@@ -54,14 +54,29 @@ Figure \@ref(fig:epochHist{{this_layer}}) shows the distribution of values in ea
 
 ```
 
-```{r epochMap{{this_layer}}, fig.cap = paste0("Map of ", this_layer), fig.asp = 0.62}
+```{r epochMap{{this_layer}}, fig.cap = paste0("Map of ", this_layer)}
 
   r <- epoch_cube[[grepl(paste0(this_layer, " "), names(epoch_cube))]]
 
   names(r) <- gsub(paste0(this_layer, " "), "", names(r))
   
   values(r) <- as.numeric(values(r))
+  
+  if(settings$level == "KI") {
     
-  terra::panel(r)
+    plot_extent <- terra::ext(r)
+    plot_extent[4] <- 1610000
+    plot_extent[3] <- 1540000 # exclude the islands a long way south of KI from the plots
+    plot_extent[2] <- 1288000
+    plot_extent[1] <- 1136000
+    
+    r <- terra::crop(r, y = plot_extent)
+    
+  }
+     
+  terra::panel(r
+               , nc = if(unique(layer_dat$source) == "DEA") 1 else 2
+               , buffer = FALSE
+               )
               
 ```
