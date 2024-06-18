@@ -59,7 +59,7 @@
                     , cli_files$offset[!cli_files$done]
                     )
                , get_cli_data
-               , base = settings$base
+               , base = terra::rast(fs::dir_ls(gsub("P3M", "P10Y", settings$sat_seas_cube_dir), regexp = "tif$")[1])
                )
   
   
@@ -129,7 +129,7 @@
                                                    , func = c
                                                    , scale = d
                                                    , offset = e
-                                                   , base = settings$base
+                                                   , base = terra::rast(fs::dir_ls(gsub("P3M", "P10Y", settings$sat_seas_cube_dir), regexp = "tif$")[1])
                                                    )
                )
   
