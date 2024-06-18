@@ -114,7 +114,10 @@ This goal of `envRas` is to create analysis ready raster data for a specific are
                        dplyr::select(layer, description, indicates)
                      ) %>%
     dplyr::mutate(values = purrr::map(path
-                                      , \(x) terra::values(terra::rast(x))
+                                      , \(x) terra::values(terra::mask(terra::rast(x)
+                                                                       , mask = settings$boundary
+                                                                       )
+                                                           )
                                       )
                   , data = purrr::map(values, \(x) quibble(x, na.rm = TRUE))
                   , use_name = paste0(layer, " ", season)
@@ -126,7 +129,8 @@ This goal of `envRas` is to create analysis ready raster data for a specific are
                   ) %>%
     tidyr::unnest(cols = c(data))
   
-  epoch_cube <- terra::rast(epoch_cube_data$path)
+  epoch_cube <- terra::rast(epoch_cube_data$path) %>%
+    terra::mask(mask = settings$boundary)
   
   names(epoch_cube) <- epoch_cube_data$use_name
 

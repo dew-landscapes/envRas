@@ -47,7 +47,7 @@
     
   }
 
-  sat_seas_cube_details <- sat_seas_cube %>%
+  sat_seas_cube_details <- sat_seas_cube_data %>%
     dplyr::mutate(desc = purrr::map(path, \(x) jsonlite::fromJSON(terra::describe(x, options = "json")))
                   , scale = purrr::map_dbl(desc, \(x) get_att(x, "bands", "scale"))
                   , offset = purrr::map_dbl(desc, \(x) get_att(x, "bands", "offset"))

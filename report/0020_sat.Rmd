@@ -9,19 +9,25 @@ Digital Earth Australia [DEA](https://www.dea.ga.gov.au/) provides earth observa
 * create a cloud mask
 * merge the image collection into the parameters defined by the regular cube, taking into account the cloud mask
 
+The `envRas` project makes use of the `envRaster` package `r cite_package("envRaster")` to abstract all these steps into the single function `get_sat_data`. 
+
 ## Example: building a single seasonal image
 
 The following example finds and processes Landsat 8 data to generate median Normalized Difference Vegetation Index ([NDVI](https://www.usgs.gov/landsat-missions/landsat-normalized-difference-vegetation-index)) for the `r settings$name` example area in summer 2019/2020.
 
-Note that the `envRas` project makes use of the `envRaster` package `r cite_package("envRaster")` to abstract all these steps into the single function `get_sat_data`. 
+Features available within DEA data were found using [DEA’s SpatioTemporal Asset Catalogue (STAC) metadata](https://knowledge.dea.ga.gov.au/guides/setup/gis/stac/). [STAC](https://stacspec.org/en) is a specification that provides a common language to describe geospatial information so it can more easily be discovered. The `rstac` package `r cite_package("rstac")` was used to find the images available for each DEA collection specified for an area of interest.
 
-### Find images
+A bounding box is required to define the area for `rstac` to search. In this case, the coordinate systems for the bounding box should be in WGS84 decimal degrees ([epsg: `4326`](https://epsg.io/4326)), irrespective of the desired spatial coordinate system of the end result.
 
-Features available within DEA data were found using [DEA’s SpatioTemporal Asset Catalogue (STAC) metadata](https://knowledge.dea.ga.gov.au/guides/setup/gis/stac/). [STAC](https://stacspec.org/en) is a specification that provides a common language to describe geospatial information so it can more easily be discovered. The `rstac` package `r `cite_package("rstac")` was used to find the images available for each DEA collection specified for an area of interest.
+The next step is to create an image collection using the function `stac_image_collection` from the `gdalcubes` package `r cite_package("gdalcubes")`. In the example below, only images with less than 10% cloud cover are returned, supplied in the example below as `property_filter`. Other arguments can be passed via the `dots` argument in `make_sat_cube` to `stac_image_collection`.
 
-A bounding box is required to define the area for `rstac` to search. In this case, the coordinate systems for the bounding box should be in WGS84 decimal degrees ([epsg: `4326`](https://epsg.io/4326)).
+A regular cube is then defined via the `gdalcubes` function `cube_view`. Here an extent is required: a bounding box with the addition of bounding dates. In this case the coordinate system for the extent should be in the desired coordinate system for the resulting cube ([epsg: `r settings$epsg_proj`](https://epsg.io/7845)). The `make_sat_cube` takes the spatial details from the base_grid supplied and the temporal details from the period supplied.
 
-```{r stacExample, include = TRUE, echo = TRUE, cache = TRUE}
+A cloud mask is created via the `mask` argument to `make_sat_cube`, in this case specifying that pixels identified as cloud and cloud shadow should be masked from the results.
+
+Finally, the collection, regular cube and cloud mask are brought together, saving the file locally.
+
+```{r satExample, include = TRUE, echo = TRUE}
 
   start_date <- "2019-12-01"
   end_date <- "2020-02-29"
@@ -31,24 +37,30 @@ A bounding box is required to define the area for `rstac` to search. In this cas
                            , res = c(settings$sat_res, settings$sat_res)
                            , vals = 1
                            )
+  
+  out_file <- fs::path(settings$out_report, "out", "ndvi__summer__2019-12-01.tif")
+  
+  if(!file.exists(out_file)) {
 
-  make_sat_cube(base_grid
-                , start_date = start_date
-                , end_date = end_date
-                , season = "summer"
-                , out_dir = here::here("report", "out")
-                , collections = c("ga_ls8c_ard_3", "ga_ls9c_ard_3")
-                , period = "P3M"
-                , layers = NULL
-                , indices = list("ndvi" = c("nir", "red"))
-                , mask = list(band = "oa_fmask", mask = c(2, 3))
-                , chunks = c(1, 1)
-                , chunk_dir = fs::path(Sys.getenv("TMPDIR"), "sat_cube_temp")
-                , chunk_prefix = "tile_"
-                , sleep = 60
-                , attempts = 1
-                , property_filter = \(x) {x[["eo:cloud_cover"]] < 10}
-                )
+    make_sat_cube(base_grid
+                  , start_date = start_date
+                  , end_date = end_date
+                  , season = "summer"
+                  , out_dir = dirname(out_file)
+                  , collections = c("ga_ls8c_ard_3", "ga_ls9c_ard_3")
+                  , period = "P3M"
+                  , layers = NULL
+                  , indices = list("ndvi" = c("nir", "red"))
+                  , mask = list(band = "oa_fmask", mask = c(2, 3))
+                  , chunks = c(1, 1)
+                  , chunk_dir = fs::path(Sys.getenv("TMPDIR"), "sat_cube_temp")
+                  , chunk_prefix = "tile_"
+                  , sleep = 60
+                  , attempts = 1
+                  , property_filter = \(x) {x[["eo:cloud_cover"]] < 10}
+                  )
+    
+  }
 
 ```
 
@@ -56,15 +68,9 @@ Figure \@ref(fig:examplePlot) shows the Normalized Difference Vegetation Index (
 
 ```{r examplePlot, fig.cap = "NDVI result for the example area"}
   
-  terra::plot(terra::rast(here::here("report"
-                                     , "out"
-                                     , paste0("ndvi__summer__"
-                                              , start_date
-                                              , ".tif"
-                                              )
-                                     )
-                          )
-              )
+  terra::rast(out_file) %>%
+    terra::mask(mask = terra::vect(settings$boundary)) %>%
+    terra::plot()
 
 ```
 
