@@ -3,7 +3,8 @@
 
   fs::dir_create(settings[["cli_seas_cube_dir", exact = TRUE]])
   
-  base_url <- "https://dapds00.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"
+  base_url <- "https://thredds.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"
+  
   
   cli_layers <- tibble::tribble(
     ~layer, ~func, ~min, ~max
