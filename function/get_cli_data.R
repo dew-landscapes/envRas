@@ -23,7 +23,18 @@
       r <- purrr::map(files
                       , safe_nc
                       , proxy = TRUE
-                      ) %>%
+                      )
+      
+      if(!is.null(r$error)) {
+        
+        readr::write_lines(r$error
+                           , paste0(gsub("tif$", "log", out_file))
+                           , append = TRUE
+                           )
+        
+      }
+      
+      r <- r %>%
         purrr::map("result") %>%
         purrr::compact()
       
