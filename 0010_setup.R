@@ -7,14 +7,9 @@
   settings$epsg_proj = 8059 # projected
   settings$epsg_latlong = 4283 # for decimal degrees
   
-  settings$start_year <- 2014
-  settings$end_year <- 2023
-  settings$epoch_period <- 10
-  
   ## satellite ------
   settings$sat_source <- "DEA"
-  settings$sat_collection <- c("ga_ls8c_ard_3", "ga_ls9c_ard_3") # don't include sentinel
-  settings$sat_res <- 90
+  settings$sat_collection <- c("ga_ls5t_ard_3", "ga_ls7e_ard_3", "ga_ls8c_ard_3", "ga_ls9c_ard_3")
   settings$sat_layers <- c("blue", "red", "green"
                            , "swir_1", "swir_2", "coastal_aerosol"
                            , "nir"
@@ -67,6 +62,9 @@
           , "forcats"
           , "stringr"
           , "lubridate"
+          
+          # parallel
+          , "furrr"
           
           # misc
           , "rio"
@@ -131,6 +129,7 @@
   
   gdalcubes::gdalcubes_options(parallel = settings$use_cores)
   
+  # gdalcubes--------
   # see https://gdalcubes.github.io/source/concepts/config.html
   gdalcubes::gdalcubes_set_gdal_config("VSI_CACHE", "TRUE")
   gdalcubes::gdalcubes_set_gdal_config("GDAL_CACHEMAX","30%")
@@ -146,25 +145,47 @@
     # see https://gis.stackexchange.com/questions/427923/preventing-terra-from-writing-auxiliary-files-when-writing-to-disc
   terra::setGDALconfig("GDAL_PAM_ENABLED", "FALSE")
 
+  # cube ------
+  ## epoch cube -------
   
-    # epochs -------
-  
-  settings$epochs <- envFunc::make_epochs(start_year = settings[["start_year", exact = TRUE]]
-                                        , end_year = settings[["end_year", exact = TRUE]]
+  # add to this later when file paths are available?
+  settings$epochs <- envFunc::make_epochs(start_year = settings[["min_year", exact = TRUE]]
+                                        , end_year = settings[["max_year", exact = TRUE]]
                                         , epoch_step = settings[["epoch_period", exact = TRUE]]
                                         , epoch_overlap = FALSE
-                                        )
+                                        ) %>%
+    dplyr::filter(purrr::map_lgl(years
+                                 , \(x) length(x) == settings$epoch_period)
+                  )
   
-  # seasons-------
+  ## month cube-------
   
-  settings$seasons <- settings$epochs %>%
+  settings$months <- settings$epochs %>%
     dplyr::mutate(seasons = purrr::map2(start_year
                                         , end_year
                                         , make_seasons
                                         )
                   ) %>%
-    dplyr::pull(seasons) %>%
-    `[[`(1)
+    dplyr::select(epoch, seasons) %>%
+    dplyr::mutate(seasons = purrr::map(seasons, "months")) %>%
+    tidyr::unnest(cols = c("seasons"))
+  
+  ## epoch cube dates -------
+  
+  # Need to be able to match every observation date to a bin (season * epoch)
+  settings$epoch_cube_dates <- settings$months %>%
+    dplyr::group_by(epoch, year_use, season) %>%
+    dplyr::summarise(min_date = min(start_date)
+                     , max_date = max(end_date)
+                     ) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(dates = purrr::map2(min_date
+                                      , max_date
+                                      , \(x, y) as.Date(x:y)
+                                      )
+                  ) %>%
+    tidyr::unnest(dates) %>%
+    dplyr::select(epoch, season, date = dates)
   
   
   # directories------
@@ -175,17 +196,17 @@
   
   
   ## sat cube ------
-  settings$sat_seas_cube_dir <- name_env_tif(settings
-                                        , dir_only = TRUE
-                                        , prefixes = c("sat", "use")
-                                        , fill_null = TRUE
-                                        )$out_dir %>%
+  settings$sat_month_cube_dir <- name_env_tif(settings
+                                              , dir_only = TRUE
+                                              , prefixes = c("sat", "use")
+                                              , fill_null = TRUE
+                                              )$out_dir %>%
     fs::path("I:", .)
   
-  fs::dir_create(settings$sat_seas_cube)
+  fs::dir_create(settings$sat_month_cube)
     
   ## cli cube ------
-  settings$cli_seas_cube_dir <- name_env_tif(settings
+  settings$cli_month_cube_dir <- name_env_tif(settings
                                         , dir_only = TRUE
                                         , prefixes = c("cli", "use")
                                         , fill_null = TRUE
@@ -195,22 +216,10 @@
   fs::dir_create(settings$cli_cube_dir)
   
   
-  ## wofs rasters -------
-  settings$wofs_dir <- name_env_tif(settings
-                                    , dir_only = TRUE
-                                    , prefixes = c("wofs", "use")
-                                    , fill_null = TRUE
-                                    )$out_dir %>%
-    fs::path("I:", .) %>%
-    gsub("P3M", "static", .)
-  
-  fs::dir_create(settings$static_dir)
-  
-  
   ## out directories ------
   
   settings$out_dir <- here::here("out"
-                                 , paste0(basename(dirname(dirname(settings$sat_seas_cube)))
+                                 , paste0(basename(dirname(dirname(settings$sat_month_cube)))
                                           , "__"
                                           , settings$sat_res
                                           )
@@ -231,7 +240,7 @@
   # what aoi to use
   lay <- sfarrow::st_read_parquet(fs::path(data_dir
                                            , "vector"
-                                           , paste0(settings[["vector", exact = TRUE]]
+                                           , paste0(settings[["polygons", exact = TRUE]]
                                                     , ".parquet"
                                                     )
                                            )
@@ -251,13 +260,13 @@
   
   # boundary ------
   
-  out_file <- fs::path(dirname(settings$sat_seas_cube), "aoi.parquet")
+  out_file <- fs::path(dirname(settings$sat_month_cube), "aoi.parquet")
   
   if(!file.exists(out_file)) {
     
-    settings$boundary <- make_aoi(layer = lay
+    settings$boundary <- make_aoi(polygons = lay
                                   , filt_col = settings[["filt_col", exact = TRUE]]
-                                  , level = settings[["level", exact = TRUE]]
+                                  , filt_level = settings[["level", exact = TRUE]]
                                   , buffer = settings[["buffer", exact = TRUE]]
                                   , bbox = settings[["use_bbox", exact = TRUE]]
                                   , clip = clip
@@ -280,7 +289,7 @@
   
   # base grid ---------
   
-  out_file <- fs::path(dirname(settings$sat_seas_cube), "base.tif")
+  out_file <- fs::path(dirname(settings$sat_month_cube), "base.tif")
   
   if(!file.exists(out_file)) {
     
@@ -306,15 +315,16 @@
     sf::st_transform(crs = settings$epsg_latlong) %>%
     sf::st_bbox()
   
-                           
-  # seasons-------
+  # parallel -------
+  # Cores to use for any parallel processing
+  settings$use_cores <- if(parallel::detectCores() > max_cores) max_cores else parallel::detectCores() - 2
   
-  stacks <- settings[["seasons", exact = TRUE]]$months %>%
-    dplyr::group_by(year_use, season) %>%
-    dplyr::summarise(start_date = min(start_date)
-                     , end_date = max(end_date)
-                     ) %>%
-    dplyr::ungroup() 
+  # Plan for any furrr functions
+  future::plan(sequential) # this line useful when resetting plan after crashing out of a furrr function
+  
+  future::plan(multisession
+               , workers = settings$use_cores
+               )
   
   # save --------
   

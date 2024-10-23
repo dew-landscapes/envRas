@@ -1,10 +1,12 @@
 
   settings <- list()
   
+  max_cores <- 32
+  
   # context
-  settings$vector <- "lsa"
-  settings$filt_col <- "LSA"
-  settings$level <- "KI"
+  settings$polygons <- "parks"
+  settings$filt_col <- "RESNAME"
+  settings$level <- "Bakara"
   settings$buffer <- 2500
 
   # context extra (not in)  
@@ -12,10 +14,17 @@
   settings$use_clip <- "aus_500m_buf"
   settings$use_clip_buffer <- 0
 
+  # epochs
+  settings$epoch_period <- 5
   
   # cube
-  settings$period <- "P3M"
-  #settings$use_res <- 30 # now set as settings$sat_res etc.
+  settings$period <- "P1M"
+  settings$sat_res <- 90
+  settings$max_year <- as.numeric(format(Sys.time(), "%Y"))
+  settings$min_year <- settings$max_year - 50
+  settings$months <- 1:12
+  
+  
   
   # comms settings-------
   make_book <- settings$level == "KI" # only make report on a small area!
@@ -28,8 +37,6 @@
   run_from <- 0
   run_to <- 90
   skips <- c("static", 5000, "90m")
-  
-  max_cores <- 2
   
   envFunc::run(run_from, run_to, skips)
   
