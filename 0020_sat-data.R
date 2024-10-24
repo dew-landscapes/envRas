@@ -1,4 +1,80 @@
 
+  # cube settings ------
+  
+  sat_month_cube_dir <- settings$sat_month_cube_dir
+  sat_collection <- settings$sat_collection
+  period <- settings$period
+  layers <- settings$sat_layers
+  indices <- settings$sat_indices
+  cube_res <- terra::res(settings$base)[[1]]
+  ras_path <- terra::sources(settings$base)
+
+  
+  # records to attribute
+  bio_all <- fs::dir_ls("H:/data/occ/sa_ibrasub_xn__0/bio_all"
+                        , regexp = "parquet$"
+                        ) %>%
+    purrr::map(\(x) rio::import(x, setclass = "tibble")) %>%
+    dplyr::bind_rows() %>%
+    envClean::filter_geo_range(settings$bbox %>%
+                                 sf::st_as_sfc() %>%
+                                 sf::st_sf()
+                               ) %>%
+    envRaster::add_raster_cell(settings$base, ., add_xy = TRUE) %>%
+    dplyr::filter(!is.na(cell))
+  
+  points <- bio_all %>%
+    dplyr::filter(rel_metres <= 250
+                  , lubridate::year(date) > 1987
+                  ) %>%
+    dplyr::distinct(lat, long, date) %>%
+    sf::st_as_sf(coords = c("long", "lat"), crs = settings$epsg_latlong, remove = FALSE) %>%
+    sf::st_transform(crs = sf::st_crs(settings$base))
+  
+  ## cube per record --------
+  
+  tictoc::tic()
+  
+  points_env <- points %>%
+    dplyr::sample_n(120) %>%  # TESTING
+    dplyr::mutate(env = furrr::future_pmap(list(long
+                                         , lat
+                                         , date
+                                         )
+                                    , \(a, b, c) get_record_env(base_path = ras_path
+                                                                , long = a
+                                                                , lat = b
+                                                                , date = c
+                                                                , dist_m = cube_res
+                                                                , extract_args = list(FUN = NULL
+                                                                                      , merge = FALSE
+                                                                                      , drop_geom = TRUE
+                                                                                      , reduce_time = FALSE
+                                                                                      )
+                                                                   , log = fs::path(settings$out_dir, "env_data", "logs", "log.log")
+                                                                   , cores = 1 # parallel over points not within points
+                                                                # dots
+                                                                   , collections = sat_collection
+                                                                   , period = period
+                                                                   , layers = layers
+                                                                   , indices = indices
+                                                                   , mask = list(band = "oa_fmask", mask = c(2, 3))
+                                                                   , sleep = 5
+                                                                   , attempts = 1
+                                                                   , max_image_cloud = 20
+                                                                   )
+                                    , .options = furrr::furrr_options(seed = TRUE
+                                                         , scheduling = Inf
+                                                         )
+                                    )
+                  )
+  
+  tictoc::toc()
+  
+  env <- points_env %>%
+    sf::st_set_geometry(NULL) %>%
+    tidyr::unnest(cols = c(env))
+
   # check tifs ------
   
   if(FALSE) {
@@ -34,14 +110,7 @@
   }
     
   
-  # cube settings ------
   
-  sat_month_cube_dir <- settings$sat_month_cube_dir
-  sat_collection <- settings$sat_collection
-  # period <- settings$period
-  layers <- settings$sat_layers
-  indices <- settings$sat_indices
-  ras_path <- terra::sources(settings$base)
   
   if(FALSE) {
     
@@ -172,24 +241,6 @@
                        , max_image_cloud = 50
                        )
   
-  temp <- fs::dir_ls("H:/data/occ/sa_ibrasub_xn__0/bio_all"
-                     , regexp = "parquet$"
-                     ) %>%
-    purrr::map(\(x) rio::import(x, setclass = "tibble")) %>%
-    dplyr::bind_rows() %>%
-    envClean::filter_geo_range(settings$bbox %>%
-                                 sf::st_as_sfc() %>%
-                                 sf::st_sf()
-                               ) %>%
-    envRaster::add_raster_cell(settings$base, ., add_xy = TRUE)
-  
-  points <- temp %>%
-    dplyr::distinct(lat, long, date, rel_metres) %>%
-    envRaster::add_raster_cell(settings$base, ., add_xy = TRUE) %>%
-    dplyr::filter(!is.na(cell)) %>%
-    sf::st_as_sf(coords = c("long", "lat"), crs = settings$epsg_latlong, remove = FALSE) %>%
-    sf::st_transform(crs = sf::st_crs(settings$base)) %>%
-    dplyr::filter(!is.na(rel_metres))
   
   gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", settings$use_cores) # only one core as parallel over periods
   
@@ -201,69 +252,8 @@
   
   }
   
-  if(FALSE) {
-    
-    ## cube per record --------
-    temp <- fs::dir_ls("H:/data/occ/sa_ibrasub_xn__0/bio_all"
-                       , regexp = "parquet$"
-                       ) %>%
-      purrr::map(\(x) rio::import(x, setclass = "tibble")) %>%
-      dplyr::bind_rows() %>%
-      envClean::filter_geo_range(settings$bbox %>%
-                                   sf::st_as_sfc() %>%
-                                   sf::st_sf()
-                                 ) %>%
-      envRaster::add_raster_cell(settings$base, ., add_xy = TRUE)
-  
-    points <- temp %>%
-      dplyr::distinct(lat, long, date, rel_metres) %>%
-      envRaster::add_raster_cell(settings$base, ., add_xy = TRUE) %>%
-      dplyr::filter(!is.na(cell)) %>%
-      sf::st_as_sf(coords = c("long", "lat"), crs = settings$epsg_latlong, remove = FALSE) %>%
-      sf::st_transform(crs = sf::st_crs(settings$base)) %>%
-      dplyr::filter(rel_metres <= 250)
-     
-    test <- dplyr::sample_n(points, 2) %>%
-      dplyr::select(-rel_metres) %>%
-      dplyr::cross_join(tibble::tibble(rel_metres = c(5, 50, 500)))
-    
-    tictoc::tic()
-    
-    points_env <- test %>% # TESTING
-      dplyr::mutate(env = furrr::future_pmap(list(long
-                                           , lat
-                                           , rel_metres
-                                           , date
-                                           )
-                                      , \(a, b, c, d) get_record_env(base_path = ras_path
-                                                                     , long = a
-                                                                     , lat = b
-                                                                     , dist_m = c
-                                                                     , date = d
-                                                                     , extract_args = list(FUN = NULL
-                                                                                           , merge = FALSE
-                                                                                           , drop_geom = TRUE
-                                                                                           , reduce_time = FALSE
-                                                                                           )
-                                                                     , log = fs::path(settings$out_dir, "env_data", "logs", "log.log")
-                                                                     , cores = 1 # parallel over points not within points
-                                                                     # dots
-                                                                     , collections = sat_collection
-                                                                     , period = "P365D"
-                                                                     , layers = layers
-                                                                     , indices = indices
-                                                                     , mask = list(band = "oa_fmask", mask = c(2, 3))
-                                                                     , sleep = 5
-                                                                     , attempts = 5
-                                                                     , max_image_cloud = 50
-                                                                     )
-                                      )
-                    )
-    
-    tictoc::toc()
     
     
-  }
   
   
   
@@ -279,12 +269,6 @@
     
   }
   
-  L8_files <- list.files(system.file("L8NY18", package = "gdalcubes"),
-                       ".TIF", recursive = TRUE, full.names = TRUE)
-d = as.Date(substr(basename(L8_files), 18, 25), "%Y%m%d")
-fname = basename(tools::file_path_sans_ext(L8_files))
-b = substr(fname, 27, nchar(fname)) # extract band names
-y = create_image_collection(L8_files, date_time = d, band_names = b)
   
   if(FALSE) {
     

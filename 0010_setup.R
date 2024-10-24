@@ -301,7 +301,9 @@
                                     )
    
     
-  } else settings$base <- terra::rast(out_file)
+  }
+  
+  settings$base <- terra::rast(out_file)
   
   
   # bboxes-------

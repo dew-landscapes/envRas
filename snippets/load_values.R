@@ -22,12 +22,12 @@ if(FALSE) {
   date <- test$date[[1]]
   lat <- test$lat[[1]]
   long <- test$long[[1]]
-  rel <- test$rel_metres[[3]]
+  dist_m <- terra::res(settings$base)[[1]]
   
   extract_args = list(FUN = NULL
                       , merge = FALSE
                       , drop_geom = TRUE
-                      , reduce_time = TRUE
+                      , reduce_time = FALSE
                       )
   
 }

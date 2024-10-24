@@ -3,10 +3,13 @@
                              , lat
                              , long
                              , crs_data = 4283
-                             , dist_m
+                             , dist_m = NULL # will use half resolution of base if NULL
                              , date
+                             #, out_file
                              , log = NULL
                              , cores = 1
+                             , out_file = NULL
+                             , use_base = FALSE
                              , extract_args = list(FUN = median
                                                    , merge = FALSE
                                                    , drop_geom = FALSE
@@ -15,14 +18,10 @@
                              , ... # get_sat_data args
                              ) {
     
+    # setup ------
     dots <- list(...)
     period <- dots$period
-    
-    # base to determine crs and resolution
-    base <- terra::rast(base_path)
-    
-    # check dist_m is > half the resolution of the base raster
-    if(dist_m < 0.5 * terra::res(base)[[1]]) dist_m <- 0.5 * terra::res(base)[[1]]
+    attempts <- dots$attempts
     
     gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", as.character(cores))
     
@@ -44,25 +43,77 @@
       
     }
     
-    # tibble for making sf
+    # base ------
+    base <- terra::rast(base_path)
+    
+    if(!is.null(log)) {
+      
+      log_text <- paste0(log_text
+                         , "load base raster took "
+                         , round(as.numeric(difftime(Sys.time(), start_time, units = "mins")), 2)
+                         , " minutes\n"
+                         )
+      
+      start_time <- Sys.time()
+      
+    }
+    
+    # dist_m --------
+    
+    if(is.null(dist_m)) dist_m <- terra::res(base)[[1]] / 2
+    
+    # poly and x -------
     rec_row <- tibble::tibble(lat = lat, long = long, dist_m = dist_m, date = date)
     
-    # polygon around point based on spatial reliability
+    ## polygon -------
     poly <- sf::st_as_sf(rec_row
                          , coords = c("long", "lat")
                          , crs = crs_data
                          , remove = FALSE
                          ) %>%
       sf::st_transform(crs = sf::st_crs(base)) %>%
-      sf::st_buffer(dist_m)
+      sf::st_buffer(dist_m / 2)
     
-    # raster to use in virtual cube
-    x <- terra::rast(extent = sf::st_bbox(poly)
-                , resolution = terra::res(base)
-                , crs = terra::crs(base)
-                , vals = 1
-                ) %>%
-      terra::mask(mask = terra::vect(poly))
+    ## x ---------
+    if(use_base) {
+      
+      x <- base %>%
+        terra::mask(poly) %>%
+        terra::trim()
+      
+    } else {
+      
+      x <- terra::rast(extent = sf::st_bbox(poly)
+                  , resolution = terra::res(base)
+                  , crs = terra::crs(base)
+                  , vals = 1
+                  ) %>%
+        terra::mask(mask = terra::vect(poly))
+      
+    }
+    
+    if(!is.null(log)) {
+      
+      log_text <- paste0(log_text
+                         , "make point poly and raster for virtual cube took "
+                         , round(as.numeric(difftime(Sys.time(), start_time, units = "mins")), 2)
+                         , " minutes\n"
+                         )
+      
+      start_time <- Sys.time()
+      
+    }
+    
+    if(FALSE) {
+      
+      # plot poly and x
+      tm_shape(poly) + tm_borders() +
+        tm_shape(x) + tm_raster()
+      
+    }
+    
+    
+    # cube -------
     
     safe_cube <- purrr::safely(get_sat_data)
     
@@ -104,15 +155,32 @@
         
       }
       
+      # extract------
+      
       safe_extract <- purrr::safely(gdalcubes::extract_geom)
       
-      env_data <- do.call(safe_extract
-                          , args = c(list(cube = cube
-                                          , sf = poly
-                                          )
-                                     , extract_args
-                                     )
-                          )
+      env_data <- tibble()
+      counter <- 0
+      
+      while(all(nrow(env_data) < 1, counter < attempts)) {
+        
+        env_data <- do.call(safe_extract
+                            , args = c(list(cube = cube
+                                            , sf = poly
+                                            )
+                                       , extract_args
+                                       )
+                            )
+        
+        counter <- counter + 1
+        
+      }
+      
+      if(!is.null(env_data$result)) {
+        
+        env_data <- env_data$result
+        
+      } else env_data <- NULL
       
       if(!is.null(log)) {
         
@@ -127,8 +195,6 @@
       
     } else env_data <- NULL
     
-    env_data <- if(!is.null(env_data$result)) env_data$result else NULL
-    
     if(!is.null(log)) {
         
         readr::write_lines(log_text
@@ -136,7 +202,7 @@
                            , append = TRUE
                            )
         
-      }
+    }
     
     return(env_data)
     
