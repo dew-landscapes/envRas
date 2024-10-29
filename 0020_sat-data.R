@@ -3,93 +3,127 @@
   
   sat_month_cube_dir <- settings$sat_month_cube_dir
   sat_collection <- settings$sat_collection
-  period <- settings$period
   layers <- settings$sat_layers
   indices <- settings$sat_indices
   cube_res <- terra::res(settings$base)[[1]]
   ras_path <- terra::sources(settings$base)
 
+  # periods
+  min_period <- settings$period
+  epoch_period <- settings$epoch_period
   
-  # records to attribute
-  bio_all <- fs::dir_ls("H:/data/occ/sa_ibrasub_xn__0/bio_all"
-                        , regexp = "parquet$"
-                        ) %>%
-    purrr::map(\(x) rio::import(x, setclass = "tibble")) %>%
-    dplyr::bind_rows() %>%
-    envClean::filter_geo_range(settings$bbox %>%
-                                 sf::st_as_sfc() %>%
-                                 sf::st_sf()
-                               ) %>%
-    envRaster::add_raster_cell(settings$base, ., add_xy = TRUE) %>%
-    dplyr::filter(!is.na(cell))
   
-  points <- bio_all %>%
-    dplyr::filter(rel_metres <= 250
-                  , lubridate::year(date) > 1987
-                  ) %>%
-    dplyr::distinct(lat, long, date) %>%
-    sf::st_as_sf(coords = c("long", "lat"), crs = settings$epsg_latlong, remove = FALSE) %>%
-    sf::st_transform(crs = sf::st_crs(settings$base))
+  if(FALSE) {
   
-  ## cube per record --------
-  
-  tictoc::tic()
-  
-  points_env <- points %>%
-    dplyr::sample_n(120) %>%  # TESTING
-    dplyr::mutate(env = furrr::future_pmap(list(long
-                                         , lat
-                                         , date
-                                         )
-                                    , \(a, b, c) get_record_env(base_path = ras_path
-                                                                , long = a
-                                                                , lat = b
-                                                                , date = c
-                                                                , dist_m = cube_res
-                                                                , extract_args = list(FUN = NULL
-                                                                                      , merge = FALSE
-                                                                                      , drop_geom = TRUE
-                                                                                      , reduce_time = FALSE
-                                                                                      )
-                                                                   , log = fs::path(settings$out_dir, "env_data", "logs", "log.log")
-                                                                   , cores = 1 # parallel over points not within points
-                                                                # dots
-                                                                   , collections = sat_collection
-                                                                   , period = period
-                                                                   , layers = layers
-                                                                   , indices = indices
-                                                                   , mask = list(band = "oa_fmask", mask = c(2, 3))
-                                                                   , sleep = 5
-                                                                   , attempts = 1
-                                                                   , max_image_cloud = 20
-                                                                   )
-                                    , .options = furrr::furrr_options(seed = TRUE
-                                                         , scheduling = Inf
-                                                         )
-                                    )
+    # cube per record -------
+    # records to attribute
+    bio_all <- fs::dir_ls("H:/data/occ/sa_ibrasub_xn__0/bio_all"
+                          , regexp = "parquet$"
+                          ) %>%
+      purrr::map(\(x) rio::import(x, setclass = "tibble")) %>%
+      dplyr::bind_rows() %>%
+      envClean::filter_geo_range(settings$bbox %>%
+                                   sf::st_as_sfc() %>%
+                                   sf::st_sf()
+                                 ) %>%
+      envRaster::add_raster_cell(settings$base, ., add_xy = TRUE) %>%
+      dplyr::filter(!is.na(cell))
+    
+    points <- bio_all %>%
+      dplyr::filter(rel_metres <= 250
+                    , lubridate::year(date) > 1987
+                    ) %>%
+      dplyr::distinct(lat, long, date) %>%
+      sf::st_as_sf(coords = c("long", "lat"), crs = settings$epsg_latlong, remove = FALSE) %>%
+      sf::st_transform(crs = sf::st_crs(settings$base))
+    
+    out_file <- fs::path(settings$out_dir, "env_data", "env_data.parquet")
+    
+    already_done <- tibble::tibble()
+    
+    while(nrow(already_done) < 0.9 * nrow(points)) {
+      
+      already_done <- if(file.exists(out_file)) rio::import(out_file, setclass = "tibble") else tibble::tibble()
+    
+      tictoc::tic()
+      
+      points_env <- points %>%
+        dplyr::anti_join(already_done) %>%
+        dplyr::sample_n(300) %>%  # TESTING
+        dplyr::mutate(env = furrr::future_pmap(list(long
+                                                    , lat
+                                                    , date
+                                                    )
+                                               , \(a, b, c) get_record_env(base_path = ras_path
+                                                                           , long = a
+                                                                           , lat = b
+                                                                           , date = c
+                                                                           , dist_m = cube_res
+                                                                           , extract_args = list(FUN = NULL
+                                                                                                 , merge = FALSE
+                                                                                                 , drop_geom = TRUE
+                                                                                                 , reduce_time = FALSE
+                                                                                                 )
+                                                                           , log = fs::path(settings$out_dir
+                                                                                            , "env_data"
+                                                                                            , "logs"
+                                                                                            , "log.log"
+                                                                                            )
+                                                                           , cores = 1 # parallel over points not within points
+                                                                           , obs_period = epoch_period
+                                                                           , use_base = FALSE
+                                                                           # dots
+                                                                           , collections = sat_collection
+                                                                           , period = min_period
+                                                                           , layers = layers
+                                                                           , indices = indices
+                                                                           , mask = list(band = "oa_fmask"
+                                                                                         , mask = c(2, 3)
+                                                                                         )
+                                                                           , sleep = 5
+                                                                           , attempts = 1
+                                                                           , max_image_cloud = 20
+                                                                           )
+                                               , .options = furrr::furrr_options(seed = TRUE
+                                                                                 , scheduling = Inf
+                                                                                 )
+                                               )
+                      )
+      
+      tictoc::toc()
+      
+      already_done <- already_done %>%
+        dplyr::bind_rows(points_env %>%
+                           sf::st_set_geometry(NULL) %>%
+                           tidyr::unnest(cols = c(env)) %>%
+                           dplyr::arrange(lat, long, time)
+                         )
+      
+      rio::export(already_done
+                  , out_file
                   )
+      
+    }
+    
+    env <- rio::import(out_file, setclass = "tibble")
   
-  tictoc::toc()
-  
-  env <- points_env %>%
-    sf::st_set_geometry(NULL) %>%
-    tidyr::unnest(cols = c(env))
+  }
 
-  # check tifs ------
   
   if(FALSE) {
     
+    # Check tifs ---------
     # only need to run this if there is a problem
     
     safe_rast <- purrr::safely(terra::rast)
       
-    test_files <- fs::dir_ls(settings$sat_month_cube_dir
+    test_files <- fs::dir_ls(unlist(settings$sat_month_cube_dir)
                              , regexp = "tif$"
                              )
     
-    tests <- purrr::map(test_files
-                        , safe_rast
-                        ) %>%
+    tests <- furrr::future_map(test_files
+                               , safe_rast
+                               ) %>%
       purrr::map("error") %>%
       purrr::compact()
     
@@ -112,64 +146,53 @@
   
   
   
-  if(FALSE) {
-    
-    #make physical cube -------
+  #make physical cube -------
   
-  furrr::future_pwalk(list(settings$months$start_date
-                           , settings$months$end_date
+  sat_cube <- settings$months %>%
+    dplyr::cross_join(tibble::enframe(settings$sat_collection, name = NULL, value = "collection")) %>%
+    dplyr::filter(start_date >= "1987-03-01") # earliest landsat ETM date
+  
+  furrr::future_pwalk(list(sat_cube$start_date
+                           , sat_cube$end_date
+                           , sat_cube$collection
                            )
-               , \(a, b) {
+               , \(a, b, c) {
                
                  get_sat_data(x = ras_path
                               , start_date = a # sat_stacks$start_date[[1]]
                               , end_date = b # sat_stacks$end_date[[1]]
                               , out_dir = sat_month_cube_dir
-                              , collections = sat_collection
-                              , period = period
+                              , collections = c
+                              , period = min_period
                               , layers = layers
                               , indices = indices
                               , mask = list(band = "oa_fmask", mask = c(2, 3))
                               , sleep = 60
                               , attempts = 5
-                              , max_image_cloud = 50
+                              , max_image_cloud = 20
                               , save_cube = TRUE
+                              , cores = 1 #settings$use_cores # CHANGE TO 1 IF USING FURRR INSTEAD OF PURRR!!
                               )
                  }
+               , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
+                                                 , scheduling = Inf # limit the 'tail' in use across cores
+                                                 )
+                       
                )
   
   ## cube results ------
-  results <- name_env_tif(settings[["sat_month_cube_dir", exact = TRUE]], parse = TRUE) %>%
+  results <- name_env_tif(dirname(settings[["sat_month_cube", exact = TRUE]][[1]]), parse = TRUE) %>%
     dplyr::mutate(start_date = as.Date(start_date))
   
   
-  }
-  
-  if(FALSE) {
-    
-    # Test results
-    
-    temp <- results %>%
-      #dplyr::filter(grepl("count|water", path)) %>%
-      dplyr::slice(1:9) %>%
-      dplyr::pull(path) %>%
-      terra::rast()
-  
-    terra::plot(temp)
-    
-  }
-  
-  
-  if(FALSE) {
-    
-    # This makes epochal seasonal cubes
-    # try gdalcubes instead
-  ## seasons --------
+  ## 'static' predict layers --------
    
   indices <- names(settings$sat_indices)
   
-  epochs <- settings$cube %>%
-    dplyr::inner_join(results) %>%
+  static <- results %>%
+    dplyr::inner_join(settings$months %>%
+                        dplyr::filter(epoch == max(epoch))
+                      ) %>%
     dplyr::filter(!is.na(path)) %>%
     dplyr::mutate(scale = dplyr::case_when(layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = -1, max = 1)$scale
                                             , !layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = 0, max = 10000)$scale
@@ -180,11 +203,7 @@
                                             , TRUE ~ 0
                                             )
                   ) %>%
-    dplyr::distinct(epoch, season
-                    , polygons, filt_col, level, buffer, period, res, source, collection
-                    , start_date, end_date, year, path
-                    , layer, scale, offset
-                    ) %>%
+    dplyr::distinct() %>%
     tidyr::nest(data = c(year, start_date, end_date, path)) %>%
     dplyr::mutate(start_date = purrr::map_chr(data, \(x) as.character(min(x$start_date)))) %>%
     name_env_tif() %>%
@@ -232,7 +251,7 @@
                        , end_date = max(settings$months$end_date)
                        , out_dir = sat_month_cube_dir
                        , collections = sat_collection
-                       , period = period
+                       , period = min_period
                        , layers = layers
                        , indices = indices
                        , mask = list(band = "oa_fmask", mask = c(2, 3))

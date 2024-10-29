@@ -9,7 +9,22 @@
   
   ## satellite ------
   settings$sat_source <- "DEA"
-  settings$sat_collection <- c("ga_ls5t_ard_3", "ga_ls7e_ard_3", "ga_ls8c_ard_3", "ga_ls9c_ard_3")
+  
+  settings$sat_collection <- list(
+    # landsat 9 and 8
+    c("ga_ls9c_ard_3"
+      , "ga_ls8c_ard_3"
+      )
+    # landsat 7 and 5
+    , c("ga_ls7e_ard_3"
+        , "ga_ls5t_ard_3"
+        )
+    # sentinel 2a and 2b
+    , c("ga_s2am_ard_3"
+        , "ga_s2bm_ard_3"
+        )
+    )
+  
   settings$sat_layers <- c("blue", "red", "green"
                            , "swir_1", "swir_2", "coastal_aerosol"
                            , "nir"
@@ -47,7 +62,7 @@
 
   # packages------
   
-  packages <- 
+  settings$packages <- 
     sort(
       unique(
         c("base"
@@ -97,13 +112,28 @@
       )
     )
   
-  new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
+  ## check for missing -------
+  new_packages <- settings$packages[!(settings$packages %in% installed.packages()[,"Package"])]
+  
+  new_packages <- new_packages[!grepl("*env", new_packages)]
   
   if(length(new_packages)) install.packages(new_packages)
   
-  purrr::walk(packages
+  ## load packages-------
+  
+  purrr::walk(settings$packages
               , library
               , character.only = TRUE
+              )
+  
+  
+  ## update 'env' packages -------
+  env_packages <- settings$packages[grepl("*env", settings$packages)]
+  
+  purrr::walk(env_packages
+              , \(x) remotes::install_github(paste0("acanthiza/", x)
+                                             , dependencies = FALSE
+                                             )
               )
   
   
@@ -149,13 +179,15 @@
   ## epoch cube -------
   
   # add to this later when file paths are available?
+  epoch_period_years <- lubridate::time_length(settings[["epoch_period", exact = TRUE]], unit = "years")
+  
   settings$epochs <- envFunc::make_epochs(start_year = settings[["min_year", exact = TRUE]]
-                                        , end_year = settings[["max_year", exact = TRUE]]
-                                        , epoch_step = settings[["epoch_period", exact = TRUE]]
-                                        , epoch_overlap = FALSE
-                                        ) %>%
+                                                    , end_year = settings[["max_year", exact = TRUE]]
+                                                    , epoch_step = epoch_period_years
+                                                    , epoch_overlap = FALSE
+                                                    ) %>%
     dplyr::filter(purrr::map_lgl(years
-                                 , \(x) length(x) == settings$epoch_period)
+                                 , \(x) length(x) == epoch_period_years)
                   )
   
   ## month cube-------
@@ -196,22 +228,27 @@
   
   
   ## sat cube ------
-  settings$sat_month_cube_dir <- name_env_tif(settings
-                                              , dir_only = TRUE
-                                              , prefixes = c("sat", "use")
-                                              , fill_null = TRUE
-                                              )$out_dir %>%
-    fs::path("I:", .)
+  settings$sat_month_cube <- purrr::map(settings$sat_collection
+                                        , \(x) name_env_tif(c(settings[names(settings) != "sat_collection"]
+                                                              , list(sat_collection = x)
+                                                              )
+                                                            , dir_only = TRUE
+                                                            , prefixes = c("sat", "use")
+                                                            , fill_null = TRUE
+                                                            )$out_dir %>%
+                                          fs::path("I:", .)
+                                        )
   
   fs::dir_create(settings$sat_month_cube)
     
+  
   ## cli cube ------
-  settings$cli_month_cube_dir <- name_env_tif(settings
-                                        , dir_only = TRUE
-                                        , prefixes = c("cli", "use")
-                                        , fill_null = TRUE
-                                        )$out_dir %>%
-      fs::path("I:", .)
+  settings$cli_month_cube <- name_env_tif(settings
+                                          , dir_only = TRUE
+                                          , prefixes = c("cli", "use")
+                                          , fill_null = TRUE
+                                          )$out_dir %>%
+    fs::path("I:", .)
   
   fs::dir_create(settings$cli_cube_dir)
   
@@ -219,7 +256,7 @@
   ## out directories ------
   
   settings$out_dir <- here::here("out"
-                                 , paste0(basename(dirname(dirname(settings$sat_month_cube)))
+                                 , paste0(basename(dirname(dirname(settings$sat_month_cube[[1]])))
                                           , "__"
                                           , settings$sat_res
                                           )
@@ -260,7 +297,7 @@
   
   # boundary ------
   
-  out_file <- fs::path(dirname(settings$sat_month_cube), "aoi.parquet")
+  out_file <- fs::path(dirname(settings$sat_month_cube[[1]]), "aoi.parquet")
   
   if(!file.exists(out_file)) {
     
@@ -289,13 +326,13 @@
   
   # base grid ---------
   
-  out_file <- fs::path(dirname(settings$sat_month_cube), "base.tif")
+  out_file <- fs::path(dirname(settings$sat_month_cube[[1]]), "base.tif")
   
   if(!file.exists(out_file)) {
     
     settings$base <- make_base_grid(settings$boundary
-                                    , base_res = settings$sat_res
-                                    , base_epsg = settings$epsg_proj
+                                    , out_res = settings$sat_res
+                                    , out_epsg = settings$epsg_proj
                                     , use_mask = clip
                                     , out_file = out_file
                                     )

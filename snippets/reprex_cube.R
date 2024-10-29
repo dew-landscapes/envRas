@@ -7,8 +7,8 @@ library(sf)
 library(fs)
 
 # inputs
-start_date <- "2014-03-01"
-end_date <- "2014-05-31"
+start_date <- "2020-03-01"
+end_date <- "2020-05-31"
 
 ## raster defining area of interest
 aoi <- terra::rast(xmin = 1443500
@@ -32,7 +32,7 @@ bbox_latlong <- bbox %>%
 
 # find items in Digital Earth Australia collections
 items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
-  rstac::stac_search(collections = c("ga_ls8c_ard_3", "ga_ls9c_ard_3")
+  rstac::stac_search(collections = c("ga_s2am_ard_3", "ga_s2bm_ard_3")
                      , bbox = bbox_latlong
                      , datetime = paste0(as.character(start_date)
                                          , "/"
@@ -49,6 +49,7 @@ col <- gdalcubes::stac_image_collection(items$features
                                         )
         
 # Setup regular cube
+  # only one 3-month time slice in 'cube'
 use_extent <- c(as.list(bbox)
                 , t0 = as.character(start_date)
                 , t1 = as.character(end_date)
@@ -69,37 +70,37 @@ cloud_mask <- gdalcubes::image_mask(band = "oa_fmask"
                                     , values = c(2, 3)
                                     )
 
+# Bring together collection and regular cube
 r <- gdalcubes::raster_cube(col
                             , v_num
                             , mask = cloud_mask
                             ) %>%
-  gdalcubes::select_bands("nbart_blue") %>%
-  gdalcubes::reduce_time(names = "blue"
-                         , FUN = \(a) {
-                           
-                           median(a, na.rm = TRUE)
-                           
-                         }
-                         )
+  gdalcubes::select_bands("nbart_blue")
 
-out_file <- fs::path(tempdir()
-                     , paste0("blue__"
-                              , start_date
-                              , ".tif"
-                              )
-                     )
-                                           
+# Retrieve and save the same cube 5 times
+purrr::walk(1:5
+            , \(x) {
+              
+              gdalcubes::write_tif(r
+                                   , dir = tempdir()
+                                   , prefix = paste0("attempt_", x)
+                                   , pack = gdalcubes::pack_minmax(type = "int16"
+                                                                   , min = 0
+                                                                   , max = 10000
+                                                                   )
+                                   , creation_options = list("COMPRESS" = "NONE")
+                                   )
+             
+             
+            }
+            )
 
-tif_file <- gdalcubes::write_tif(r
-                                 , dir = dirname(out_file)
-                                 , prefix = "blue__"
-                                 , pack = gdalcubes::pack_minmax(type = "int16"
-                                                                 , min = 0
-                                                                 , max = 10000
-                                                                 )
-                                 , creation_options = list("COMPRESS" = "NONE")
-                                 )
-
-terra::plot(terra::rast(tif_file))
+# Plot the results from each of the 5 saves
+  # some will have a chunk or two missing IN DIFFERENT PLACES
+fs::dir_ls(tempdir()
+           , regexp = "attempt.*tif$"
+           ) %>%
+  terra::rast() %>%
+  terra::plot()
 
 

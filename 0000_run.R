@@ -14,16 +14,20 @@
   settings$use_clip <- "aus_500m_buf"
   settings$use_clip_buffer <- 0
 
-  # epochs
-  settings$epoch_period <- 5
+  # periods
+  settings$min_period <- "P1M"
+  settings$epoch_period <- "P60M" # 5 years
   
   # cube
-  settings$period <- "P365D"
   settings$sat_res <- 90
   settings$max_year <- as.numeric(format(Sys.time(), "%Y"))
   settings$min_year <- settings$max_year - 50
   settings$months <- 1:12
   
+  # period
+  settings$period <- "P1M"
+  settings$epoch_period <- "P60M"
+  # i.e. with min_period = "P1M" and obs_period = "P12M" gives 12 temporal cells (months) per observation period
   
   
   # comms settings-------

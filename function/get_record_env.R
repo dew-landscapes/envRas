@@ -5,11 +5,10 @@
                              , crs_data = 4283
                              , dist_m = NULL # will use half resolution of base if NULL
                              , date
-                             #, out_file
                              , log = NULL
                              , cores = 1
-                             , out_file = NULL
                              , use_base = FALSE
+                             , obs_period = "P12M"
                              , extract_args = list(FUN = median
                                                    , merge = FALSE
                                                    , drop_geom = FALSE
@@ -20,7 +19,6 @@
     
     # setup ------
     dots <- list(...)
-    period <- dots$period
     attempts <- dots$attempts
     
     gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", as.character(cores))
@@ -118,8 +116,9 @@
     safe_cube <- purrr::safely(get_sat_data)
     
     cube <- safe_cube(x
-                      , start_date = date - round(lubridate::time_length(period, unit = "days"), 0)
-                      , end_date = date
+                      , start_date = lubridate::ceiling_date(date, "month") - round(lubridate::time_length(obs_period, unit = "days"), 0)
+                      , end_date = lubridate::ceiling_date(date, "month") - 1
+                      , cores = 1 # as parallel over points, not within points
                       , ...
                       )
     

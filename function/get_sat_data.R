@@ -10,6 +10,7 @@
                            , indices = list(gdvi = c("green", "nir")
                                             , ndvi = c("nir", "red")
                                             )
+                           , cores = 1
                            , force_new = FALSE
                            , attempts = 3
                            , mask = list(band = "oa_fmask"
@@ -30,7 +31,7 @@
     gdalcubes::gdalcubes_set_gdal_config("GDAL_DISABLE_READDIR_ON_OPEN","EMPTY_DIR")
     gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_VERSION","2")
     gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES","YES")
-    gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", "1") # only one core as parallel over periods
+    gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", cores)
     
     items <- NULL
     
