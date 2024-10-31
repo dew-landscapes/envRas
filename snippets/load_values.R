@@ -1,14 +1,14 @@
 if(FALSE) {
   
   # get_sat_data
+  id <- 100
   x = terra::sources(settings$base)
-  start_date <- settings$months$start_date[[500]]
-  end_date <- settings$months$end_date[[500]]
+  start_date <- sat_cube_todo$start_date[[id]]
+  end_date <- sat_cube_todo$end_date[[id]]
+  collections <- sat_cube_todo$collection[[id]]
+  out_dir <- sat_cube_todo$path[[id]]
   
-  period = settings$min_period
-  
-  out_dir = settings$sat_month_cube_dir
-  collections = settings$sat_collection
+  period = settings$period
   
   layers = settings$sat_layers
   indices = settings$sat_indices
@@ -16,10 +16,10 @@ if(FALSE) {
   sleep = 60
   attempts = 5
   max_image_cloud = 50
+  cores = settings$use_cores
   
   force_new <- FALSE
  
-  
   save_cube <- TRUE
   save_cube <- FALSE
   

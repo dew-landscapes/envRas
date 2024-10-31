@@ -20,9 +20,9 @@
         , "ga_ls5t_ard_3"
         )
     # sentinel 2a and 2b
-    , c("ga_s2am_ard_3"
-        , "ga_s2bm_ard_3"
-        )
+    # , c("ga_s2am_ard_3"
+    #     , "ga_s2bm_ard_3"
+    #     )
     )
   
   settings$sat_layers <- c("blue", "red", "green"
@@ -176,7 +176,7 @@
   terra::setGDALconfig("GDAL_PAM_ENABLED", "FALSE")
 
   # cube ------
-  ## epoch cube -------
+  ## epoch_period cube -------
   
   # add to this later when file paths are available?
   epoch_period_years <- lubridate::time_length(settings[["epoch_period", exact = TRUE]], unit = "years")
@@ -200,11 +200,12 @@
                   ) %>%
     dplyr::select(epoch, seasons) %>%
     dplyr::mutate(seasons = purrr::map(seasons, "months")) %>%
-    tidyr::unnest(cols = c("seasons"))
+    tidyr::unnest(cols = c("seasons")) %>%
+    dplyr::filter(start_date < lubridate::floor_date(Sys.Date(), "month"))
   
   ## epoch cube dates -------
   
-  # Need to be able to match every observation date to a bin (season * epoch)
+  # If need to match any observation date to a bin (season * epoch)
   settings$epoch_cube_dates <- settings$months %>%
     dplyr::group_by(epoch, year_use, season) %>%
     dplyr::summarise(min_date = min(start_date)
