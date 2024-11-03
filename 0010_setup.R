@@ -16,13 +16,13 @@
       , "ga_ls8c_ard_3"
       )
     # landsat 7 and 5
-    , c("ga_ls7e_ard_3"
-        , "ga_ls5t_ard_3"
-        )
-    # sentinel 2a and 2b
-    # , c("ga_s2am_ard_3"
-    #     , "ga_s2bm_ard_3"
+    # , c("ga_ls7e_ard_3"
+    #     , "ga_ls5t_ard_3"
     #     )
+    # sentinel 2a and 2b
+    , c("ga_s2am_ard_3"
+        , "ga_s2bm_ard_3"
+        )
     )
   
   settings$sat_layers <- c("blue", "red", "green"
@@ -36,12 +36,11 @@
                                , nbr2 = c("nir", "swir_2")
                                )
   
-  settings$chunks <- c(2, 2) # should lead to chunks[1] * chunks[2] tiles
   
   ## climate -------
   settings$cli_source <- "NCI"
   settings$cli_collection <- "ANUClimate"
-  settings$cli_res <- 1000
+  settings$cli_res <- 1000 # nearly native resolution for ANUClimate 2.0
   
   ## statics --------
   settings$wofs_source <- "DEA"
@@ -251,7 +250,16 @@
                                           )$out_dir %>%
     fs::path("I:", .)
   
-  fs::dir_create(settings$cli_cube_dir)
+  fs::dir_create(settings$cli_month_cube)
+  
+  ## predict cube -------
+  settings$predict_cube <- gsub("P1M"
+                                , paste0(settings$epoch_period
+                                         , "--"
+                                         , settings$season_period
+                                         )
+                                , dirname(settings$sat_month_cube[[1]])
+                                )
   
   
   ## out directories ------

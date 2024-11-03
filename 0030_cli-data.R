@@ -1,8 +1,6 @@
 
   # cube-------
 
-  fs::dir_create(settings[["cli_seas_cube_dir", exact = TRUE]])
-  
   base_url <- "https://thredds.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"
   
   
@@ -19,7 +17,11 @@
   
   
 
-  cli_files <- settings[["seasons", exact = TRUE]]$months %>%
+  cli_files <- settings$months %>%
+    dplyr::cross_join(tibble::enframe(settings$cli_month_cube, name = NULL, value = "path") %>%
+                        tidyr::unnest(cols = c(path)) %>%
+                        dplyr::mutate(collection = settings$cli_collection)
+                      ) %>%
     dplyr::cross_join(cli_layers) %>%
     dplyr::mutate(file_specific = format(start_date, "%Y%m")
                   , file = paste0(base_url
@@ -35,14 +37,9 @@
                                            , ".nc"
                                            )
                                   )
-                  ) %>%
-    dplyr::select(year = year_use, season, layer, func, file, min , max) %>%
-    tidyr::nest(data = c(file)) %>%
-    dplyr::left_join(settings[["seasons", exact = TRUE]]$season) %>%
-    #dplyr::sample_n(1) %>% # TESTING
-    dplyr::mutate(out_file = fs::path(settings[["cli_seas_cube_dir", exact = TRUE]]
-                                      , paste0(layer, "__", season, "__", start_date,".tif")
-                                      )
+                  , out_file = fs::path(path
+                                        , paste0(layer, "__", start_date,".tif")
+                                        )
                   , done = file.exists(out_file)
                   , scale = purrr::map2_dbl(min, max
                                         , \(x, y) gdalcubes::pack_minmax(min = x, max = y)$scale
@@ -53,26 +50,21 @@
                   )
   
   
-  purrr::pwalk(list(cli_files$data[!cli_files$done]
-                    , cli_files$out_file[!cli_files$done]
-                    , cli_files$func[!cli_files$done]
-                    , cli_files$scale[!cli_files$done]
-                    , cli_files$offset[!cli_files$done]
+  purrr::pwalk(list(files = cli_files$file[!cli_files$done]
+                    , out_file = cli_files$out_file[!cli_files$done]
+                    , func = cli_files$func[!cli_files$done]
+                    , scale = cli_files$scale[!cli_files$done]
+                    , offset = cli_files$offset[!cli_files$done]
                     )
-               , get_cli_data
-               , base = terra::rast(fs::dir_ls(gsub("P3M", "P10Y", settings$sat_seas_cube_dir), regexp = "tif$")[1])
+               , get_thredds_data
+               #, base = settings$base
+               , boundary = settings$boundary
                )
   
   
-  # cube results-------
-  
-  results_cli <- fs::dir_info(settings[["cli_seas_cube_dir", exact = TRUE]]
-                          , regexp = "tif$"
-                          ) %>%
-    dplyr::select(path) %>%
-    name_env_tif(parse = TRUE) %>%
+  ## cube results ------
+  results <- name_env_tif(dirname(settings[["cli_month_cube", exact = TRUE]][[1]]), parse = TRUE) %>%
     dplyr::mutate(start_date = as.Date(start_date))
-  
   
   if(FALSE) {
     
@@ -87,51 +79,47 @@
   }
   
 
-  # epochs_cli ----------
-  
-  epochs_cli <- settings$epochs %>%
-    tidyr::unnest(cols = c(years)) %>%
-    dplyr::rename(year = years) %>%
-    dplyr::select(year, epoch) %>%
-    dplyr::left_join(settings[["seasons", exact = TRUE]]$seasons) %>%
-    dplyr::left_join(results_cli) %>%
+  # 'static' (predict) layers --------
+   
+  static <- results %>%
+    dplyr::inner_join(settings$months %>%
+                        dplyr::filter(epoch == max(epoch))
+                      ) %>%
     dplyr::filter(!is.na(path)) %>%
     dplyr::left_join(cli_layers) %>%
-    tidyr::nest(data = c(year, start_date, end_date, path)) %>%
-    dplyr::mutate(start_date = purrr::map_chr(data, \(x) as.character(min(x$start_date)))) %>%
-    name_env_tif() %>%
-    dplyr::mutate(out_file = fs::path("I:"
-                                      , gsub("P3M", "P10Y", out_file)
-                                      )
-                  , out_file = gsub("1000", settings$sat_res, out_file)
+    dplyr::mutate(scale = gdalcubes::pack_minmax(min = min, max = max)$scale
+                  , offset = gdalcubes::pack_minmax(min = min, max = max)$offset
                   ) %>%
-    dplyr::mutate(stack = purrr::map(data
-                                     , ~ terra::rast(.$path)
-                                     )
+    dplyr::distinct(polygons, filt_col, level, buffer, period, res, source, collection, layer
+                    , start_date, end_date, epoch, season
+                    , year, year_use, path, scale, offset, func
+                    ) %>%
+    tidyr::nest(data = c(year, year_use, start_date, end_date, path)) %>%
+    dplyr::mutate(start_date = purrr::map_chr(data, \(x) as.character(min(x$start_date)))) %>%
+    dplyr::mutate(period = paste0(settings$epoch_period, "--P3M")
+                  , res = settings$sat_res # needs to be the same here for predicting
+                  ) %>%
+    name_env_tif() %>%
+    dplyr::mutate(tif_paths = purrr::map(data, "path")
+                  , out_file = fs::path("I:", out_file)
                   , done = file.exists(out_file)
-                  , scale = purrr::map2_dbl(min, max
-                                        , \(x, y) gdalcubes::pack_minmax(min = x, max = y)$scale
-                                        )
-                  , offset = purrr::map2_dbl(min, max
-                                         , \(x, y) gdalcubes::pack_minmax(min = x, max = y)$offset
-                                         )
                   )
   
-  fs::dir_create(dirname(epochs_cli$out_file[1]))
+  fs::dir_create(dirname(static$out_file[1]))
   
-  purrr::pwalk(list(epochs_cli$stack[!epochs_cli$done]
-                    , epochs_cli$out_file[!epochs_cli$done]
-                    , epochs_cli$func[!epochs_cli$done]
-                    , epochs_cli$scale[!epochs_cli$done]
-                    , epochs_cli$offset[!epochs_cli$done]
+  purrr::pwalk(list(static$tif_paths[!static$done]
+                    , static$out_file[!static$done]
+                    , static$func[!static$done]
+                    , static$scale[!static$done]
+                    , static$offset[!static$done]
                     )
-               , function(a, b, c, d, e) align_cli(s = a
-                                                   , out_file = b
-                                                   , func = c
-                                                   , scale = d
-                                                   , offset = e
-                                                   , base = terra::rast(fs::dir_ls(gsub("P3M", "P10Y", settings$sat_seas_cube_dir), regexp = "tif$")[1])
-                                                   )
+               , \(a, b, c, d, e) align_cli(paths = a
+                                            , out_file = b
+                                            , func = c
+                                            , scale = d
+                                            , offset = e
+                                            , base = settings$base # needs to be the same as satellite data for predicting
+                                            )
                )
   
   

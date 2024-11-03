@@ -21,7 +21,7 @@
     
     safe_rast <- purrr::safely(terra::rast)
       
-    test_files <- fs::dir_ls(unlist(settings$sat_month_cube_dir)
+    test_files <- fs::dir_ls(unlist(settings$sat_month_cube)
                              , regexp = "tif$"
                              )
     
@@ -74,7 +74,7 @@
                  , name = "left_to_do"
                  )
   
-  furrr::future_pwalk(list(sat_cube_todo$start_date
+  purrr::pwalk(list(sat_cube_todo$start_date
                            , sat_cube_todo$end_date
                            , sat_cube_todo$collection
                            , sat_cube_todo$path
@@ -94,12 +94,12 @@
                               , attempts = 5
                               , max_image_cloud = 20
                               , save_cube = TRUE
-                              , cores = 1 #settings$use_cores # CHANGE TO 1 IF USING FURRR INSTEAD OF PURRR!!
+                              , cores = settings$use_cores # CHANGE TO 1 IF USING FURRR INSTEAD OF PURRR!!
                               )
                  }
-               , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
-                                                 , scheduling = Inf # limit the 'tail' in use across cores
-                                                 )
+               # , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
+               #                                   , scheduling = Inf # limit the 'tail' in use across cores
+               #                                   )
                )
   
   ## cube results ------
