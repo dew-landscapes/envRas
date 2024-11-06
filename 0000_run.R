@@ -1,6 +1,8 @@
 
   settings <- list()
   
+  check_tifs <- TRUE
+  
   max_cores <- 32
   
   # context
@@ -23,7 +25,7 @@
   ## periods
   settings$period <- "P1M" # Just don't change this! It is not really a setting. Too much relies on 'month'. Also, need 'period' for name_env_tif
   settings$season_period <- "P3M" # combined with epoch_period to form the predict cube and for extracting data to points
-  settings$epoch_period <- "P60M" # combined with season_period to form the predict cube and for extracting data to points
+  settings$epoch_period <- "P120M" # combined with season_period to form the predict cube and for extracting data to points
   
   
   # comms settings-------

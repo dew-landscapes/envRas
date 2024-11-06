@@ -7,8 +7,8 @@
                         , base = NULL
                         ) {
     
-    r <- terra::app(terra::rast(paths)
-                    , func
+    r <- terra::app(x = terra::rast(paths)
+                    , fun = func
                     , na.rm = TRUE
                     )
     
@@ -17,11 +17,9 @@
     if(!is.null(base)) {
       
       r <- r %>%
-      terra::project(terra::crs(base)
-                     , method = "near"
-                     )
-    
-    
+        terra::project(terra::crs(base)
+                       , method = "near"
+                       )
     
       ratio <- terra::res(r) / terra::res(base)
       

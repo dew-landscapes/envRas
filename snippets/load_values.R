@@ -1,13 +1,18 @@
 if(FALSE) {
   
   # get_sat_data
-  id <- 100
+  id <- which(sat_cube_todo$start_date == "2023-11-01")
   x = terra::sources(settings$base)
+  source_url = "https://explorer.sandbox.dea.ga.gov.au/stac"
+  collections = sat_cube_todo$collection[[id]]
+  excludes = "nbar_" # no longer needed?
   start_date <- sat_cube_todo$start_date[[id]]
   end_date <- sat_cube_todo$end_date[[id]]
   collections <- sat_cube_todo$collection[[id]]
   out_dir <- sat_cube_todo$path[[id]]
-  
+  aggregation_func = "median"
+  resampling_method = "bilinear"
+  property_filter = function(x) {x[["eo:cloud_cover"]] < 20}
   period = settings$period
   
   layers = settings$sat_layers

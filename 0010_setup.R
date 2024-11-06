@@ -20,9 +20,9 @@
     #     , "ga_ls5t_ard_3"
     #     )
     # sentinel 2a and 2b
-    , c("ga_s2am_ard_3"
-        , "ga_s2bm_ard_3"
-        )
+    # , c("ga_s2am_ard_3"
+    #     , "ga_s2bm_ard_3"
+    #     )
     )
   
   settings$sat_layers <- c("blue", "red", "green"

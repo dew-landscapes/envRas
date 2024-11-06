@@ -12,11 +12,9 @@
   min_period <- settings$period
   epoch_period <- settings$epoch_period
   
-  check_tifs <- FALSE
-  
   if(check_tifs) {
     
-    # Check tifs ---------
+    # check month cube ---------
     # only need to run this if there is a problem
     
     safe_rast <- purrr::safely(terra::rast)
@@ -49,6 +47,8 @@
     
   
   # month cube -------
+  
+  ## Best if settings$period is the same as the temporal extent of each time slice in the cube
   
   sat_cube <- settings$months %>%
     dplyr::cross_join(tibble::enframe(settings$sat_month_cube, name = NULL, value = "path") %>%
@@ -87,14 +87,15 @@
                               , out_dir = s
                               , collections = r
                               , period = min_period
+                              , property_filter = function(x) {x[["eo:cloud_cover"]] < 20}
                               , layers = layers
                               , indices = indices
                               , mask = list(band = "oa_fmask", mask = c(2, 3))
                               , sleep = 60
                               , attempts = 5
-                              , max_image_cloud = 20
                               , save_cube = TRUE
                               , cores = settings$use_cores # CHANGE TO 1 IF USING FURRR INSTEAD OF PURRR!!
+                              , creation_options = list("COMPRESS" = "NONE")
                               )
                  }
                # , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
@@ -135,6 +136,39 @@
                   , out_file = fs::path("I:", out_file)
                   , done = file.exists(out_file)
                   )
+  
+  if(check_tifs) {
+    
+    # Check predict cube ---------
+    # only need to run this if there is a problem
+    
+    safe_rast <- purrr::safely(terra::rast)
+      
+    test_files <- fs::dir_ls(unique(dirname(static$out_file))
+                             , regexp = "tif$"
+                             )
+    
+    tests <- purrr::map(test_files
+                               , safe_rast
+                               ) %>%
+      purrr::map("error") %>%
+      purrr::compact()
+    
+    if(length(tests)) {
+      
+      message("files:\n"
+              , paste0(names(tests), collapse = "\n")
+              , "\nwill be deleted"
+              )
+      
+      purrr::map(names(tests)[file.exists(names(tests))]
+                 , unlink
+                 , force = TRUE
+                 )
+      
+    }  
+    
+  }
   
   fs::dir_create(unique(dirname(static$out_file)))
   

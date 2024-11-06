@@ -49,6 +49,39 @@
                                          )
                   )
   
+  if(check_tifs) {
+    
+    # check month cube ---------
+    # only need to run this if there is a problem
+    
+    safe_rast <- purrr::safely(terra::rast)
+      
+    test_files <- fs::dir_ls(unlist(settings$cli_month_cube)
+                             , regexp = "tif$"
+                             )
+    
+    tests <- furrr::future_map(test_files
+                               , safe_rast
+                               ) %>%
+      purrr::map("error") %>%
+      purrr::compact()
+    
+    if(length(tests)) {
+      
+      message("files: "
+              , tests
+              , " are being deleted"
+              )
+      
+      purrr::map(names(tests)[file.exists(names(tests))]
+                 , unlink
+                 , force = TRUE
+                 )
+      
+    }  
+    
+  }
+  
   
   purrr::pwalk(list(files = cli_files$file[!cli_files$done]
                     , out_file = cli_files$out_file[!cli_files$done]
