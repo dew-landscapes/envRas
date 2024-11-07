@@ -1,7 +1,7 @@
 
   settings <- list()
   
-  check_tifs <- TRUE
+  check_tifs <- FALSE
   
   max_cores <- 32
   

@@ -358,8 +358,9 @@
   settings$bbox_use_epsg <- sf::st_bbox(settings$base)
   
   # geographic
-  settings$bbox <- settings$bbox_use_epsg %>%
+  settings$bbox_latlong <- settings$bbox_use_epsg %>%
     sf::st_as_sfc() %>%
+    sf::st_buffer(10000) %>% # buffer by 10 km to ensure bbox captures entirety of bbox_use_epsg
     sf::st_transform(crs = settings$epsg_latlong) %>%
     sf::st_bbox()
   

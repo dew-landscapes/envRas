@@ -60,7 +60,7 @@
                              , regexp = "tif$"
                              )
     
-    tests <- furrr::future_map(test_files
+    tests <- purrr::map(test_files
                                , safe_rast
                                ) %>%
       purrr::map("error") %>%
@@ -82,16 +82,20 @@
     
   }
   
-  
-  purrr::pwalk(list(files = cli_files$file[!cli_files$done]
-                    , out_file = cli_files$out_file[!cli_files$done]
-                    , func = cli_files$func[!cli_files$done]
-                    , scale = cli_files$scale[!cli_files$done]
-                    , offset = cli_files$offset[!cli_files$done]
+  # montly cube ------
+  furrr::future_pwalk(list(files = cli_files$file
+                    , out_file = cli_files$out_file
+                    , func = cli_files$func
+                    , scale = cli_files$scale
+                    , offset = cli_files$offset
                     )
                , get_thredds_data
-               #, base = settings$base
-               , boundary = settings$boundary
+               #, base = settings$base # don't use base here
+               , bbox = settings$bbox_latlong
+               , force_new = FALSE
+               , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
+                                                 , scheduling = Inf # limit the 'tail' in use across cores
+                                                 )
                )
   
   

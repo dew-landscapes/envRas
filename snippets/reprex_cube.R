@@ -11,12 +11,13 @@ start_date <- "2020-03-01"
 end_date <- "2020-05-31"
 
 ## raster defining area of interest
-aoi <- terra::rast(xmin = 1443500
-                   , ymin = 1699000
-                   , xmax = 1461500
-                   , ymax = 1726990
-                   , resolution = c(30, 30)
+aoi <- terra::rast(xmin = 1450000
+                   , ymin = 1710000
+                   , xmax = 1455500
+                   , ymax = 1715500
+                   , resolution = c(15, 15)
                    , crs = "epsg:8059"
+                   , vals = 1
                    )
 
 # bbox from raster
@@ -45,7 +46,7 @@ items <- rstac::stac("https://explorer.sandbox.dea.ga.gov.au/stac") %>%
 # Create collection of blue and cloud mask
 col <- gdalcubes::stac_image_collection(items$features
                                         , asset_names = c("nbart_blue", "oa_fmask")
-                                        , property_filter = function(x) {x[["eo:cloud_cover"]] < 10}
+                                        , property_filter = function(x) {x[["eo:cloud_cover"]] < 50}
                                         )
         
 # Setup regular cube
@@ -78,7 +79,7 @@ r <- gdalcubes::raster_cube(col
   gdalcubes::select_bands("nbart_blue")
 
 # Retrieve and save the same cube 5 times
-purrr::walk(1:5
+purrr::walk(1:10
             , \(x) {
               
               gdalcubes::write_tif(r

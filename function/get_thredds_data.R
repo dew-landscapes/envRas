@@ -1,9 +1,10 @@
   
 get_thredds_data <- function(files
                              , files_epsg = 4283
-                             , boundary
                              , func = "median"
+                             , bbox = NULL
                              , base = NULL
+                             , project_to_base = FALSE
                              , out_file
                              , scale = 1
                              , offset = 0
@@ -42,13 +43,28 @@ get_thredds_data <- function(files
       purrr::compact()
     
     if(length(r)) {
+      
+      use_bbox <- if(!is.null(base)) {
+        
+        sf::st_bbox(base) %>%
+          sf::st_as_sfc() %>%
+          sf::st_transform(crs = files_epsg) %>%
+          sf::st_bbox()
+        
+      } else if(!is.null(bbox)) {
+        
+        bbox
+        
+      } else {
+        
+        sf::st_bbox(r)
+        
+      }
     
       r <- r %>%
         purrr::map(sf::st_set_crs, files_epsg) %>%
         purrr::map(`[`
-                   , i = boundary %>%
-                     sf::st_transform(crs = files_epsg) %>%
-                     sf::st_bbox()
+                   , i = sf::st_bbox(use_bbox)
                    ) %>%
         purrr::map(stars::st_as_stars
                    , proxy = FALSE
@@ -64,12 +80,20 @@ get_thredds_data <- function(files
       
       terra::set.names(r, r_name)
       
-      if(!is.null(base)) {
+      if(project_to_base) {
         
-        r <- r %>%
-          terra::project(y = base
-                         , ...
-                         )
+        if(!is.null(base)) {
+          
+          if("SpatRaster" %in% class(base)) {
+        
+            r <- r %>%
+              terra::project(y = base
+                             , ...
+                             )
+            
+          }
+          
+        }
         
       }
       
