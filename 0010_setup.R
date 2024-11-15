@@ -46,7 +46,7 @@
   
   ## statics --------
   settings$wofs_source <- "DEA"
-  settings$wofs_collection <- "wofs_summary"
+  settings$wofs_collection <- "ga_ls_wo_3"
   settings$wofs_res <- settings$sat_res
   
   
@@ -254,6 +254,20 @@
     fs::path("I:", .)
   
   fs::dir_create(settings$cli_month_cube)
+  
+  ## wofs cube --------
+  settings$wofs_month_cube <- purrr::map(settings$wofs_collection
+                                        , \(x) name_env_tif(c(settings[names(settings) != "sat_collection"]
+                                                              , list(sat_collection = x)
+                                                              )
+                                                            , dir_only = TRUE
+                                                            , prefixes = c("sat", "use")
+                                                            , fill_null = TRUE
+                                                            )$out_dir %>%
+                                          fs::path("I:", .)
+                                        )
+  
+  fs::dir_create(settings$sat_month_cube)
   
   ## predict cube -------
   settings$predict_cube <- gsub("P1M"
