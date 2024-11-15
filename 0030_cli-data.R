@@ -83,7 +83,7 @@
   }
   
   # montly cube ------
-  furrr::future_pwalk(list(files = cli_files$file
+  purrr::pwalk(list(files = cli_files$file
                     , out_file = cli_files$out_file
                     , func = cli_files$func
                     , scale = cli_files$scale
@@ -92,10 +92,10 @@
                , get_thredds_data
                #, base = settings$base # don't use base here
                , bbox = settings$bbox_latlong
-               , force_new = FALSE
-               , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
-                                                 , scheduling = Inf # limit the 'tail' in use across cores
-                                                 )
+               , force_new = force_new_cli
+               # , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
+               #                                   , scheduling = Inf # limit the 'tail' in use across cores
+               #                                   )
                )
   
   

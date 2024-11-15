@@ -87,7 +87,7 @@
                               , out_dir = s
                               , collections = r
                               , period = min_period
-                              , property_filter = function(x) {x[["eo:cloud_cover"]] < 20}
+                              , property_filter = function(x) {x[["eo:cloud_cover"]] < settings$sat_max_cloud}
                               , layers = layers
                               , indices = indices
                               , mask = list(band = "oa_fmask", mask = c(2, 3))
@@ -96,6 +96,7 @@
                               , save_cube = TRUE
                               , cores = settings$use_cores # CHANGE TO 1 IF USING FURRR INSTEAD OF PURRR!!
                               , creation_options = list("COMPRESS" = "NONE")
+                              , force_new = force_new_sat
                               )
                  }
                # , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?

@@ -3,6 +3,9 @@
   
   check_tifs <- FALSE
   
+  force_new_sat <- TRUE
+  force_new_cli <- FALSE
+  
   max_cores <- 32
   
   # context
@@ -37,7 +40,7 @@
   #----------RUN---------
   
   run_from <- 0
-  run_to <- 20
+  run_to <- 40
   skips <- c("static", 5000, "90m")
   
   envFunc::run(run_from, run_to, skips)

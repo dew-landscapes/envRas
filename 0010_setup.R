@@ -36,6 +36,8 @@
                                , nbr2 = c("nir", "swir_2")
                                )
   
+  settings$sat_max_cloud <- 10
+  
   
   ## climate -------
   settings$cli_source <- "NCI"
@@ -118,21 +120,22 @@
   
   if(length(new_packages)) install.packages(new_packages)
   
+  
+  ## update 'env' packages -------
+  # env_packages <- settings$packages[grepl("*env", settings$packages)]
+  # 
+  # purrr::walk(env_packages
+  #             , \(x) remotes::install_github(paste0("acanthiza/", x)
+  #                                            , dependencies = FALSE
+  #                                            )
+  #             )
+  
+  
   ## load packages-------
   
   purrr::walk(settings$packages
               , library
               , character.only = TRUE
-              )
-  
-  
-  ## update 'env' packages -------
-  env_packages <- settings$packages[grepl("*env", settings$packages)]
-  
-  purrr::walk(env_packages
-              , \(x) remotes::install_github(paste0("acanthiza/", x)
-                                             , dependencies = FALSE
-                                             )
               )
   
   
@@ -194,7 +197,7 @@
   settings$months <- settings$epochs %>%
     dplyr::mutate(seasons = purrr::map2(start_year
                                         , end_year
-                                        , make_seasons
+                                        , envFunc::make_seasons
                                         )
                   ) %>%
     dplyr::select(epoch, seasons) %>%
