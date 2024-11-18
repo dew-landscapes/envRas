@@ -30,7 +30,7 @@
                            , "nir"
                            )
   
-  settings$sat_indices <- list(gdvi = c("green", "nir")
+  settings$sat_indices <- list(gdwi = c("green", "nir")
                                , ndvi = c("nir", "red")
                                , nbr = c("nir", "swir_1")
                                , nbr2 = c("nir", "swir_2")
@@ -385,12 +385,12 @@
   # Cores to use for any parallel processing
   settings$use_cores <- if(parallel::detectCores() > max_cores) max_cores else parallel::detectCores() - 2
   
-  # Plan for any furrr functions
-  future::plan(sequential) # this line useful when resetting plan after crashing out of a furrr function
-  
-  future::plan(multisession
-               , workers = settings$use_cores
-               )
+  # # Plan for any furrr functions
+  # future::plan(sequential) # this line useful when resetting plan after crashing out of a furrr function
+  # 
+  # future::plan(multisession
+  #              , workers = settings$use_cores
+  #              )
   
   # save --------
   
