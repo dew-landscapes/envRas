@@ -69,5 +69,55 @@
                  
                  }
                
-               )  
+               )
+  
+  
+  ## cube results ------
+  results <- name_env_tif(dirname(settings[["sat_month_cube", exact = TRUE]][[1]]), parse = TRUE) %>%
+    dplyr::filter(grepl("water", path)) %>%
+    dplyr::mutate(start_date = as.Date(start_date))
+  
+  
+  # 'static' (predict) layers --------
+   
+  static <- results %>%
+    dplyr::inner_join(settings$months %>%
+                        dplyr::filter(epoch == max(epoch))
+                      ) %>%
+    dplyr::filter(!is.na(path)) %>%
+    dplyr::mutate(scale = gdalcubes::pack_minmax(min = 0, max = 1)$scale
+                  , offset = gdalcubes::pack_minmax(min = -1, max = 1)$offset
+                  ) %>%
+    dplyr::distinct(polygons, filt_col, level, buffer, period, res, source, collection, layer
+                    , start_date, end_date, epoch, season
+                    , year, year_use, path, scale, offset
+                    ) %>%
+    tidyr::nest(data = c(year, year_use, start_date, end_date, path)) %>%
+    dplyr::mutate(start_date = purrr::map_chr(data, \(x) as.character(min(x$start_date)))) %>%
+    dplyr::mutate(period = paste0(settings$epoch_period, "--P3M")) %>%
+    name_env_tif() %>%
+    dplyr::mutate(tif_paths = purrr::map(data, "path")
+                  , out_file = fs::path("I:", out_file)
+                  , done = file.exists(out_file)
+                  )
+  
+  fs::dir_create(unique(dirname(static$out_file)))
+  
+  purrr::pwalk(list(static$tif_paths[!static$done]
+                    , static$out_file[!static$done]
+                    , static$scale[!static$done]
+                    , static$offset[!static$done]
+                    )
+               , \(a, b, c, d) terra::app(terra::rast(a)
+                                          , fun = \(x) sum(x, na.rm = TRUE) / sum(!is.na(x))
+                                          , filename = b
+                                          , overwrite = TRUE
+                                          , wopt = list(datatype = "INT2S"
+                                                        , scale = c
+                                                        , offset = d
+                                                        , gdal = c("COMPRESS=NONE")
+                                                        )
+                                          , cores = settings$use_cores
+                                          )
+               )
   

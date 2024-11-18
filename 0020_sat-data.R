@@ -106,7 +106,7 @@
   
   ## cube results ------
   results <- name_env_tif(dirname(settings[["sat_month_cube", exact = TRUE]][[1]]), parse = TRUE) %>%
-    dplyr::filter(!grepl("holes", path)) %>%
+    dplyr::filter(!grepl("holes|water", path)) %>%
     dplyr::mutate(start_date = as.Date(start_date))
   
   
@@ -222,3 +222,5 @@
     terra::plot(r)
     
   }
+
+  
