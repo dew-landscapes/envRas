@@ -3,10 +3,10 @@
   
   check_tifs <- FALSE
   
-  force_new_sat <- TRUE
+  force_new_sat <- FALSE
   force_new_cli <- FALSE
   
-  max_cores <- 32
+  max_cores <- 20
   
   # context
   settings$polygons <- "sa_ibrasub_xn"
