@@ -30,10 +30,11 @@
                            , "nir"
                            )
   
-  settings$sat_indices <- list(gdwi = c("green", "nir")
+  settings$sat_indices <- list(ndwi = c("green", "nir")
                                , ndvi = c("nir", "red")
-                               , nbr = c("nir", "swir_1")
-                               , nbr2 = c("nir", "swir_2")
+                               , nbr = c("nir", "swir_2")
+                               , nbr2 = c("swir_1", "swir_2")
+                               , ndmi = c("nir", "swir_1")
                                )
   
   settings$sat_max_cloud <- 10
