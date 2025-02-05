@@ -25,17 +25,20 @@
     #     )
     )
   
-  settings$sat_layers <- c("blue", "red", "green"
-                           , "swir_1", "swir_2", "coastal_aerosol"
-                           , "nir"
+  settings$sat_layers <- c(NULL
+                           # , "blue", "red", "green"
+                           # , "swir_1", "swir_2", "coastal_aerosol"
+                           # , "nir"
                            )
   
-  settings$sat_indices <- list(ndwi = c("green", "nir")
-                               , ndvi = c("nir", "red")
-                               , nbr = c("nir", "swir_2")
+  settings$sat_indices <- list(NULL
+                               # , ndvi = c("nir", "red")
+                               # , nbr = c("nir", "swir_2")
                                , nbr2 = c("swir_1", "swir_2")
-                               , ndmi = c("nir", "swir_1")
-                               )
+                               # , ndwi = c("green", "nir")
+                               # , ndmi = c("nir", "swir_1")
+                               ) %>%
+    purrr::compact()
   
   settings$sat_max_cloud <- 10
   
