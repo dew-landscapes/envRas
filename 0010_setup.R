@@ -363,8 +363,9 @@
     settings$base <- make_base_grid(settings$boundary
                                     , out_res = settings$sat_res
                                     , out_epsg = settings$epsg_proj
-                                    , use_mask = clip
+                                    , use_mask = clip |> sf::st_transform(sf::st_crs(settings$boundary))
                                     , out_file = out_file
+                                    , overwrite = TRUE
                                     )
    
     

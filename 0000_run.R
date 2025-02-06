@@ -9,14 +9,14 @@
   max_cores <- 20
   
   # context
-  settings$polygons <- "sa_ibrasub_xn"
+  settings$polygons <- "aus_imcra_prov_dissolve"
   settings$filt_col <- NULL
   settings$level <- NULL
   settings$buffer <- 0
 
   # context extra (not in names)  
   settings$use_bbox <- FALSE
-  settings$use_clip <- "aus_500m_buf"
+  settings$use_clip <- "aus_imcra_prov_dissolve"
   settings$use_clip_buffer <- 0
 
   # cube
@@ -40,7 +40,7 @@
   #----------RUN---------
   
   run_from <- 0
-  run_to <- 40
+  run_to <- 10
   skips <- c("static", 5000, "90m")
   
   envFunc::run(run_from, run_to, skips)
