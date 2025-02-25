@@ -26,17 +26,17 @@
     )
   
   settings$sat_layers <- c(NULL
-                           # , "blue", "red", "green"
-                           # , "swir_1", "swir_2", "coastal_aerosol"
-                           # , "nir"
+                            , "blue", "red", "green"
+                            , "swir_1", "swir_2", "coastal_aerosol"
+                            , "nir"
                            )
   
   settings$sat_indices <- list(NULL
-                               # , ndvi = c("nir", "red")
-                               # , nbr = c("nir", "swir_2")
+                               , ndvi = c("nir", "red")
+                               , nbr = c("nir", "swir_2")
                                , nbr2 = c("swir_1", "swir_2")
-                               # , ndwi = c("green", "nir")
-                               # , ndmi = c("nir", "swir_1")
+                               , ndwi = c("green", "nir")
+                               , ndmi = c("nir", "swir_1")
                                ) %>%
     purrr::compact()
   
@@ -52,6 +52,11 @@
   settings$wofs_source <- "DEA"
   settings$wofs_collection <- "ga_ls_wo_3"
   settings$wofs_res <- settings$sat_res
+  
+  ## soil -------
+  settings$soils_source <- "TERN"
+  settings$soils_collection <- "SLGA"
+  settings$soils_res <- settings$sat_res
   
   
   ## landcover-------
@@ -167,15 +172,15 @@
   
   # gdalcubes--------
   # see https://gdalcubes.github.io/source/concepts/config.html
-  gdalcubes::gdalcubes_set_gdal_config("VSI_CACHE", "TRUE")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_CACHEMAX","30%")
-  gdalcubes::gdalcubes_set_gdal_config("VSI_CACHE_SIZE","100000000")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_MULTIPLEX","YES")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_INGESTED_BYTES_AT_OPEN","32000")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_DISABLE_READDIR_ON_OPEN","EMPTY_DIR")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_VERSION","2")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES","YES")
-  gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", as.character(settings$use_cores))
+  # gdalcubes::gdalcubes_set_gdal_config("VSI_CACHE", "TRUE")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_CACHEMAX","30%")
+  # gdalcubes::gdalcubes_set_gdal_config("VSI_CACHE_SIZE","100000000")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_MULTIPLEX","YES")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_INGESTED_BYTES_AT_OPEN","32000")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_DISABLE_READDIR_ON_OPEN","EMPTY_DIR")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_VERSION","2")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_HTTP_MERGE_CONSECUTIVE_RANGES","YES")
+  # gdalcubes::gdalcubes_set_gdal_config("GDAL_NUM_THREADS", as.character(settings$use_cores))
   
   # stop extra little files being written
     # see https://gis.stackexchange.com/questions/427923/preventing-terra-from-writing-auxiliary-files-when-writing-to-disc
@@ -282,6 +287,12 @@
                                 , dirname(settings$sat_month_cube[[1]])
                                 )
   
+  ### soils -------
+  settings$soils_out <- fs::path(settings$predict_cube
+                                 , paste0(settings$soils_source, "__", settings$soils_collection)
+                                 )
+    
+    
   
   ## out directories ------
   
@@ -327,7 +338,7 @@
   
   # boundary ------
   
-  out_file <- fs::path(dirname(settings$sat_month_cube[[1]]), "aoi.parquet")
+  out_file <- fs::path(dirname(dirname(settings$sat_month_cube[[1]])), "aoi.parquet")
   
   if(!file.exists(out_file)) {
     
@@ -363,10 +374,12 @@
     settings$base <- make_base_grid(settings$boundary
                                     , out_res = settings$sat_res
                                     , out_epsg = settings$epsg_proj
-                                    , use_mask = clip |> sf::st_transform(sf::st_crs(settings$boundary))
+                                    , use_mask = if(!is.null(clip)) clip |> sf::st_transform(sf::st_crs(settings$boundary)) else NULL
                                     , out_file = out_file
                                     , overwrite = TRUE
                                     )
+    
+    if(FALSE) terra::plot(terra::rast(out_file))
    
     
   }
