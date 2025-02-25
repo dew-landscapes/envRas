@@ -1,4 +1,6 @@
 
+  library("magrittr")
+  
   settings <- list()
   
   check_tifs <- FALSE
@@ -6,17 +8,17 @@
   force_new_sat <- FALSE
   force_new_cli <- FALSE
   
-  max_cores <- 20
+  max_cores <- 10
   
   # context
-  settings$polygons <- "aus_imcra_prov_dissolve"
+  settings$polygons <- "sa_br_dissolve"
   settings$filt_col <- NULL
   settings$level <- NULL
   settings$buffer <- 0
 
   # context extra (not in names)  
   settings$use_bbox <- FALSE
-  settings$use_clip <- "aus_imcra_prov_dissolve"
+  settings$use_clip <- "sa_br_dissolve"
   settings$use_clip_buffer <- 0
 
   # cube
@@ -40,8 +42,8 @@
   #----------RUN---------
   
   run_from <- 0
-  run_to <- 10
-  skips <- c("static", 5000, "90m")
+  run_to <- 40
+  skips <- c("static", "soils", 5000, "90m")
   
   envFunc::run(run_from, run_to, skips)
   
