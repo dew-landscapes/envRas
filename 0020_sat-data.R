@@ -61,7 +61,9 @@
                                           , TRUE ~ FALSE
                                           )
                   ) %>%
-    dplyr::filter(todo)
+    dplyr::filter(epoch == max(epoch)
+                  , todo
+                  )
   
   sat_cube_todo <- sat_cube %>%
     dplyr::cross_join(tibble::tibble(layer = c(settings$sat_layers, names(settings$sat_indices)))) %>%
@@ -75,10 +77,10 @@
                  )
   
   purrr::pwalk(list(sat_cube_todo$start_date
-                           , sat_cube_todo$end_date
-                           , sat_cube_todo$collection
-                           , sat_cube_todo$path
-                           )
+                    , sat_cube_todo$end_date
+                    , sat_cube_todo$collection
+                    , sat_cube_todo$path
+                    )
                , \(p, q, r, s) {
                
                  get_sat_data(x = ras_path
@@ -97,6 +99,16 @@
                               , cores = settings$use_cores # CHANGE TO 1 IF USING FURRR INSTEAD OF PURRR!!
                               , creation_options = list("COMPRESS" = "NONE")
                               , force_new = force_new_sat
+                              , gdalcubes_config = list(VSI_CACHE = "TRUE"
+                                                        , GDAL_CACHEMAX = "30%"
+                                                        , VSI_CACHE_SIZE = "100000000"
+                                                        , GDAL_HTTP_MULTIPLEX = "YES"
+                                                        , GDAL_INGESTED_BYTES_AT_OPEN = "32000"
+                                                        , GDAL_DISABLE_READDIR_ON_OPEN = "EMPTY_DIR"
+                                                        , GDAL_HTTP_VERSION = "2"
+                                                        , GDAL_HTTP_MERGE_CONSECUTIVE_RANGES = "YES"
+                                                        , GDAL_NUM_THREADS = settings$use_cores
+                                                        )
                               )
                  }
                # , .options = furrr::furrr_options(seed = TRUE # probably not neccessary?
@@ -117,18 +129,9 @@
                         dplyr::filter(epoch == max(epoch))
                       ) %>%
     dplyr::filter(!is.na(path)) %>%
-    dplyr::mutate(scale = dplyr::case_when(layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = -1, max = 1)$scale
-                                            , !layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = 0, max = 10000)$scale
-                                            , TRUE ~ 1
-                                            )
-                  , offset = dplyr::case_when(layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = -1, max = 1)$offset
-                                            , !layer %in% names(settings$sat_indices) ~ gdalcubes::pack_minmax(min = 0, max = 10000)$offset
-                                            , TRUE ~ 0
-                                            )
-                  ) %>%
     dplyr::distinct(polygons, filt_col, level, buffer, period, res, source, collection, layer
                     , start_date, end_date, epoch, season
-                    , year, year_use, path, scale, offset
+                    , year, year_use, path
                     ) %>%
     tidyr::nest(data = c(year, year_use, start_date, end_date, path)) %>%
     dplyr::mutate(start_date = purrr::map_chr(data, \(x) as.character(min(x$start_date)))) %>%
@@ -176,20 +179,16 @@
   
   purrr::pwalk(list(static$tif_paths[!static$done]
                     , static$out_file[!static$done]
-                    , static$scale[!static$done]
-                    , static$offset[!static$done]
                     )
-               , \(a, b, c, d) terra::app(terra::rast(a)
-                                          , fun = "median"
-                                          , na.rm = TRUE
-                                          , filename = b
-                                          , overwrite = TRUE
-                                          , wopt = list(datatype = "INT2S"
-                                                        , scale = c
-                                                        , offset = d
-                                                        , gdal = c("COMPRESS=NONE")
-                                                        )
-                                          )
+               , \(a, b) terra::app(terra::rast(a)
+                                    , fun = "median"
+                                    , na.rm = TRUE
+                                    , filename = b
+                                    , overwrite = TRUE
+                                    , wopt = list(datatype = "INT2S"
+                                                  , gdal = c("COMPRESS=NONE")
+                                                  )
+                                    )
                )
   
   
