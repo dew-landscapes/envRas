@@ -18,6 +18,7 @@
   
 
   cli_files <- settings$months %>%
+    dplyr::filter(epoch == max(epoch)) |>
     dplyr::cross_join(tibble::enframe(settings$cli_month_cube, name = NULL, value = "path") %>%
                         tidyr::unnest(cols = c(path)) %>%
                         dplyr::mutate(collection = settings$cli_collection)
@@ -109,9 +110,9 @@
       dplyr::sample_n(16) %>%
       dplyr::pull(path)
     
-    plot(temp %>%
-           terra::rast()
-         )
+    terra::plot(temp %>%
+                  terra::rast()
+                )
     
   }
   
@@ -140,8 +141,11 @@
     dplyr::mutate(tif_paths = purrr::map(data, "path")
                   , out_file = fs::path("I:", out_file)
                   , done = file.exists(out_file)
+                  , coarse = gsub("90", "1000", out_file)
+                  , coarse_done = file.exists(coarse)
                   )
   
+  # fine scale -------
   fs::dir_create(dirname(static$out_file[1]))
   
   purrr::pwalk(list(static$tif_paths[!static$done]
@@ -159,4 +163,38 @@
                                             )
                )
   
+  # coarse scale ------
+  fs::dir_create(dirname(static$coarse[[1]]))
   
+  purrr::pwalk(list(static$tif_paths[! static$coarse_done]
+                    , static$coarse[! static$coarse_done]
+                    , static$func[! static$coarse_done]
+                    , static$scale[! static$coarse_done]
+                    , static$offset[! static$coarse_done]
+                    )
+               , \(a, b, c, d, e) terra::app(terra::rast(a)
+                                             , fun = c
+                                             , na.rm = TRUE
+                                             ) |>
+                 terra::project(y = paste0("epsg:", settings$epsg_proj)
+                                , overwrite = TRUE
+                                , filename = b
+                                , wopt = list(datatype = "INT2S"
+                                              , gdal = c("COMPRESS=NONE")
+                                              , scale = d
+                                              , offset = e
+                                              )
+                                )
+               )
+  
+  if(FALSE) {
+    
+    temp <- static %>%
+      dplyr::sample_n(6) %>%
+      dplyr::pull(coarse)
+    
+    terra::plot(temp %>%
+                  terra::rast()
+                )
+    
+  }
