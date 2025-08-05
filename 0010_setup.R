@@ -123,29 +123,10 @@
     )
   
   ## check for missing -------
-  new_packages <- settings$packages[!(settings$packages %in% installed.packages()[,"Package"])]
-  
-  new_packages <- new_packages[!grepl("*env", new_packages)]
-  
-  if(length(new_packages)) install.packages(new_packages)
-  
-  
-  ## update 'env' packages -------
-  # env_packages <- settings$packages[grepl("*env", settings$packages)]
-  # 
-  # purrr::walk(env_packages
-  #             , \(x) remotes::install_github(paste0("acanthiza/", x)
-  #                                            , dependencies = FALSE
-  #                                            )
-  #             )
-  
-  
-  ## load packages-------
-  
-  purrr::walk(settings$packages
-              , library
-              , character.only = TRUE
-              )
+  envFunc::check_packages(settings$packages
+                          , update_env = TRUE
+                          , lib = TRUE
+                          )
   
   
   # functions------
@@ -159,11 +140,10 @@
   
   tmap::tmap_mode("view")
   
-  tmap::tmap_options(basemaps = c("OpenStreetMap.Mapnik"
-                                  , "Esri.WorldImagery"
-                                  )
-                     , limits = c(facets.plot = 100)
-                     , max.raster = c(plot = 1e7, view = 1e6)
+  tmap::tmap_options(basemap.server = c("OpenStreetMap.Mapnik"
+                                        , "Esri.WorldImagery"
+                                        )
+                     , raster.max_cells = c(plot = 1e7, view = 1e6)
                      )
   
   # Sys.setenv(AWS_NO_SIGN_REQUEST = "YES")
@@ -225,7 +205,7 @@
     dplyr::ungroup() %>%
     dplyr::mutate(dates = purrr::map2(min_date
                                       , max_date
-                                      , \(x, y) as.Date(x:y)
+                                      , \(x, y) seq(x, y, by = "day")
                                       )
                   ) %>%
     tidyr::unnest(dates) %>%

@@ -83,7 +83,7 @@
     
   }
   
-  # montly cube ------
+  # monthly cube ------
   purrr::pwalk(list(files = cli_files$file
                     , out_file = cli_files$out_file
                     , func = cli_files$func

@@ -175,7 +175,19 @@
     
   }
   
+  # create directory for static tifs
   fs::dir_create(unique(dirname(static$out_file)))
+  
+  # copy over base.tif
+  copied_base <- fs::path(dirname(dirname(static$out_file[[1]])), "base.tif")
+  
+  if(!file.exists(copied_base)) {
+    
+    fs::file_copy(terra::sources(settings$base)
+                  , copied_base
+                  )
+    
+  }
   
   purrr::pwalk(list(static$tif_paths[!static$done]
                     , static$out_file[!static$done]

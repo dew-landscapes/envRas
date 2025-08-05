@@ -8,7 +8,7 @@
   force_new_sat <- FALSE
   force_new_cli <- FALSE
   
-  max_cores <- 10
+  max_cores <- floor(parallel::detectCores() * (3 / 4))
   
   # context
   settings$polygons <- "sa_br_dissolve"
@@ -22,7 +22,7 @@
   settings$use_clip_buffer <- 0
 
   # cube
-  settings$sat_res <- 90
+  settings$sat_res <- 30
   settings$max_year <- as.numeric(format(Sys.time(), "%Y")) - 1
   settings$min_year <- settings$max_year - 50
   settings$months <- 1:12
@@ -42,7 +42,7 @@
   #----------RUN---------
   
   run_from <- 0
-  run_to <- 40
+  run_to <- 30
   skips <- c("static", "soils", 5000, "90m")
   
   envFunc::run(run_from, run_to, skips)
