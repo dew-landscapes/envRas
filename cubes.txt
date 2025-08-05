@@ -1,0 +1,42 @@
+This directory contains 'cubes' with
+* extent defined by
+    + first directory
+    + polygon layers available in R:/projects/landscapes/data/vector
+    + e.g. bounding box around the intersection of SA with IBRA Subregions is sa_ibrasub_xn
+    + boundary is also defined by aoi.parquet (a simple feature ('sf') spatial object 'parquet' file)
+* grain defined by
+    + second directory
+    + using ISO 8601 time periods and resolution in metres 
+    + e.g. P1M__90 is a grain of 1 month * 90 m * 90 m
+* source and collection defined by
+    + third directory
+    + e.g. DEA is Digital Earth Australia and ga_ls7e_ard_3--ga_ls5t_ard_3 includes both of DEAs Landsat 5 and 7 analysis ready data collections
+    + see https://explorer.dea.ga.gov.au/products for details on DEA collections
+* bands
+    + as file names
+    + e.g. band_name__start_date.tif
+    + where start_date is the starting date for the grain period
+    + values contain (usually) median of any cells in the original stack, as defined by the grain, but excluding 
+      + images with < 10% cloud
+      + pixels identified as cloud or cloud mask
+* crs
+    + epsg 8059
+
+Indices, always generated as (first_band - second_band) / (first_band + second_band), are:
+* ndwi = c("green", "nir")
+    + normalized difference water index
+    + for Landsat 8-9, NDWI = (Band 3 – Band 5) / (Band 3 + Band 5)
+* ndvi = c("nir", "red")
+    + normalized difference vegetation index
+    + for Landsat 8-9, NDVI = (Band 5 – Band 4) / (Band 5 + Band 4)
+* nbr = c("nir", "swir_2") 
+    + normalized burn ratio
+    + for Landsat 8-9, NBR = (Band 5 – Band 7) / (Band 5 + Band 7)
+* nbr2 = c("swir_1", "swir_2")
+    + normalized burned ratio index 2
+    + for Landsat 8-9, NBR2 = (Band 6 – Band 7) / (Band 6 + Band 7)
+* ndmi = c("nir", "swir_1")
+    + normalized difference moisture index
+    + for Landsat 8-9, NDMI = (Band 5 – Band 6) / (Band 5 + Band 6)
+    
+see https://www.indexdatabase.de/ for exhaustive definitions of indices

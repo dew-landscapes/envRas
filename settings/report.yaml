@@ -1,0 +1,4 @@
+
+# Quantiles above which to include a taxa in the report summary tables (not the appendices which include everything)
+per_cov_quant_thresh: 0.95
+pres_quant_thresh: 0.95

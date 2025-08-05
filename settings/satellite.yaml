@@ -1,0 +1,38 @@
+
+# satellite ------
+source: "DEA"
+
+source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
+  
+collection: "ga_ls8cls9c_gm_cyear_3"
+  
+layers:
+  # - "blue"
+  # - "red"
+  # - "green"
+  # - "swir_1"
+  # - "swir_2"
+  # # - "coastal_aerosol" # doesn't appear to be in the calendar year collection
+  # - "nir"
+  
+variability:
+  - "sdev"
+  - "edev"
+  - "bcdev"
+
+indices:
+  # ndvi:
+  #   - nir
+  #   - red
+  # nbr:
+  #   - nir
+  #   - swir_2
+  # nbr2:
+  #   - swir_1
+  #   - swir_2
+  # ndwi:
+  #   - green
+  #   - nir
+  # ndmi:
+  #   - nir
+  #   - swir_1

@@ -1,0 +1,53 @@
+packages:
+    - "base"
+    
+# targets
+    - "targets"
+    - "crew"
+    - "crew.cluster"
+    - "geotargets"
+    - "tarchetypes"
+
+#tidyverse
+    - "dplyr"
+    - "tidyr"
+    - "purrr"
+    - "forcats"
+    - "ggplot2"
+    - "tibble"
+    - "stringr"
+    - "readr"
+    - "fs"
+    - "lubridate"
+    - "usethis"
+    - "scales"
+
+# misc
+    - "here"
+    - "sessioninfo"
+    - "yaml"
+    - "ymlthis"
+                           
+# raster
+    - "terra"
+
+# maps
+    - "sf"
+    - "sfarrow"
+    - "tmap"
+
+# env
+    - "envFunc"
+    - "envRaster"
+    - "envReport"
+    - "envTargets"
+    - "envShiny"
+
+# report
+    - "knitr"
+    - "rmarkdown"
+    - "bookdown"
+    - "patchwork"
+    - "scales"
+    - "kableExtra"
+    - "DT"

@@ -1,0 +1,14 @@
+# crs
+crs:
+  proj: 8059 # for projected
+  decdeg: 4326 # for decimal degrees
+  
+# directories
+extent:
+  vector: "sa_br_dissolve"
+  filt_col: NULL
+  filt_level: NULL
+  buffer: 0
+grain:
+  temp: "P5Y"
+  res: 90
