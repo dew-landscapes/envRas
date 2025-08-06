@@ -15,13 +15,14 @@ tar_source(c("R/save_cube_layer.R"
            )
 
 # tar options --------
+# parallel over individual layer rather than across layers, so no need for crew_controller_local etc
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               , controller = crew_controller_local(workers = floor(parallel::detectCores() * (2 / 3))
-                                                    , crashes_max = 0L
-                                                    , options_local = crew_options_local(log_directory = fs::path(tars$satellite$store, "log"))
-                                                    )
-               , storage = "worker"
-               , retrieval = "worker"
+               # , controller = crew_controller_local(workers = floor(parallel::detectCores() * 2 / 3) # number of cores downloading from DEA
+               #                                      , crashes_max = 0L
+               #                                      , options_local = crew_options_local(log_directory = fs::path(tars$satellite$store, "log"))
+               #                                      )
+               # , storage = "worker"
+               # , retrieval = "worker"
                )
 
 # from setup --------
@@ -110,12 +111,6 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$layers)) {
                                  )
                     )
 
-  #### combine layers --------
-  comb_layers <- tar_combine(name = layers_comb
-                             , layers[["layer"]]
-                             , command = dplyr::bind_rows(!!!.x, .id = "data_name")
-                             )
-
 }
 
 
@@ -142,7 +137,14 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$variability)) {
 
 ### indices -------
 if(length(yaml::read_yaml("settings/satellite.yaml")$indices)) {
-
+  
+  #### combine layers --------
+  comb_layers <- tar_combine(name = layers_comb
+                             , layers[["layer"]]
+                             , command = dplyr::bind_rows(!!!.x, .id = "data_name")
+                             )
+  
+  #### calculate -------
   indices <- tar_map(values = list(indices = yaml::read_yaml("settings/satellite.yaml")$indices |> names())
                      , tar_target(name = indice
                                   , command = make_indice(indice = indices
