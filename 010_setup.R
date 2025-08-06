@@ -6,7 +6,7 @@ library(crew)
 library(crew.cluster)
 
 # tars -------
-tars <- yaml::read_yaml("_targets.yaml")
+# tars <- yaml::read_yaml("_targets.yaml")
 
 # tar options -------
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
@@ -46,10 +46,10 @@ list(
   ### cube directory ------
   , tar_target(cube_directory
                , name_env_tif(x = c(settings$extent
-                                         , settings$grain
-                                         , source = settings_satellite$source
-                                         , collection = settings_satellite$collection
-                                         )
+                                    , settings$grain
+                                    , source = settings_satellite$source
+                                    , collection = settings_satellite$collection
+                                    )
                               , context_defn = c("vector", "filt_col", "filt_level", "buffer")
                               , cube_defn = c("temp", "res")
                               , dir_only = TRUE
@@ -77,7 +77,7 @@ list(
                )
   , tar_target(name = extent_sf_save
                , save_geoparquet(extent_sf
-                                 , out_file = fs::path(dirname(dirname(make_cube_dir))
+                                 , out_file = fs::path(dirname(make_cube_dir)
                                                        , "aoi.parquet"
                                                        )
                                  )
@@ -89,18 +89,18 @@ list(
                                     , out_res = settings$grain$res
                                     , out_epsg = settings$crs$proj
                                     , use_mask = extent_sf
-                                    , out_file = fs::path(dirname(dirname(make_cube_dir)), "base_grid.tif")
+                                    , out_file = fs::path(dirname(make_cube_dir), "base_grid.tif")
                                     , overwrite = TRUE
                                     )
                    )
-  ## read me
-  , tar_target(readme_txt
+  ## read me --------
+  , tar_target(readme_file
                , "cubes.txt"
                , format = "file"
                )
   , tar_target(readme
-               , fs::file_copy("cubes.txt"
-                               , fs::path(dirname(dirname(make_cube_dir)), "ReadMe.txt")
+               , fs::file_copy(readme_file
+                               , fs::path(dirname(make_cube_dir), "ReadMe.txt")
                                , overwrite = TRUE
                                )
                , format = "file"
