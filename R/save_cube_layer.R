@@ -1,5 +1,7 @@
 
-save_cube_layer <- function(base_grid
+save_cube_layer <- function(items
+                            , base_grid
+                            , bbox
                             , layer
                             , start_date
                             , end_date
@@ -8,22 +10,6 @@ save_cube_layer <- function(base_grid
                             , settings
                             , ...
                             ) {
-  
-  bbox <- sf::st_bbox(base_grid) |>
-    sf::st_as_sfc() |>
-    sf::st_transform(crs = settings$crs$decdeg) |> # need decimal lat/long for rstac
-    sf::st_bbox()
-  
-  items <- rstac::stac(settings$source_url) |>
-    rstac::stac_search(collections = settings$collection
-                       , bbox = bbox
-                       , datetime = paste0(as.character(start_date)
-                                           , "/"
-                                           , as.character(end_date)
-                                           )
-                       ) |>
-    rstac::get_request() |>
-    rstac::items_fetch()
   
   layer_to_get <- items |>
     rstac::items_assets() |>
