@@ -3,7 +3,16 @@ make_indice <- function(indice
                         , layers
                         , base_dir
                         , settings
+                        , terra_options = list(memfrac = 0.2)
                         ) {
+  
+  if(!is.null(terra_options)) {
+    
+    do.call(terra::terraOptions
+            , args = terra_options
+            )
+
+  }
   
   indice_name <- indice
   
