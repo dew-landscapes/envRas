@@ -89,7 +89,7 @@ list(
                                     , out_res = settings$grain$res
                                     , out_epsg = settings$crs$proj
                                     , use_mask = extent_sf
-                                    , out_file = fs::path(dirname(make_cube_dir), "base_grid.tif")
+                                    , out_file = fs::path(dirname(make_cube_dir), "base.tif")
                                     , overwrite = TRUE
                                     )
                    )
