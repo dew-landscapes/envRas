@@ -10,5 +10,5 @@ extent:
   filt_level: NULL
   buffer: 0
 grain:
-  temp: "P5Y"
+  temp: "P10Y"
   res: 90
