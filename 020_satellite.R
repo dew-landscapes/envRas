@@ -64,15 +64,36 @@ targets <- list(
   , tar_terra_rast(base_grid
                    , terra::rast(base_grid_file)
                    )
+  #### bbox -------
+  , tar_target(bbox
+               , sf::st_bbox(base_grid) |>
+                 sf::st_as_sfc() |>
+                 sf::st_transform(crs = settings$crs$decdeg) |> # need decimal lat/long for rstac
+                 sf::st_bbox()
+               )
+  ### items ------
+  , tar_target(items
+               , rstac::stac(settings_satellite$source_url) |>
+                 rstac::stac_search(collections = settings_satellite$collection
+                                    , bbox = bbox
+                                    , datetime = paste0(as.character(min_date)
+                                                        , "/"
+                                                        , as.character(max_date)
+                                                        )
+                                    ) |>
+                 rstac::get_request() |>
+                 rstac::items_fetch()
+               )
   )
 
 ## get data --------
 ### layers --------
 if(length(yaml::read_yaml("settings/satellite.yaml")$layers)) {
-  
+
   layers <- tar_map(values = list(layers = yaml::read_yaml("settings/satellite.yaml")$layers)
                     , tar_target(name = layer
-                                 , command = save_cube_layer(base_grid = base_grid
+                                 , command = save_cube_layer(items = items
+                                                             , base_grid = base_grid
                                                              , layer = layers
                                                              , start_date = min_date
                                                              , end_date = max_date
@@ -84,27 +105,28 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$layers)) {
                                                                            , scale = 1
                                                                            , offset = 0
                                                                            , nodata = -999
-                                                                           ) 
+                                                                           )
                                                              )
                                  )
                     )
-  
+
   #### combine layers --------
   comb_layers <- tar_combine(name = layers_comb
                              , layers[["layer"]]
                              , command = dplyr::bind_rows(!!!.x, .id = "data_name")
                              )
-  
+
 }
 
 
 
 ### variabilities ----------
 if(length(yaml::read_yaml("settings/satellite.yaml")$variability)) {
-  
+
   variability <- tar_map(values = list(layers = yaml::read_yaml("settings/satellite.yaml")$variability)
                          , tar_target(name = variability
-                                      , command = save_cube_layer(base_grid = base_grid
+                                      , command = save_cube_layer(items = items
+                                                                  , base_grid = base_grid
                                                                   , layer = layers
                                                                   , start_date = min_date
                                                                   , end_date = max_date
@@ -115,12 +137,12 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$variability)) {
                                                                   )
                                       )
                          )
-  
+
 }
 
 ### indices -------
 if(length(yaml::read_yaml("settings/satellite.yaml")$indices)) {
-  
+
   indices <- tar_map(values = list(indices = yaml::read_yaml("settings/satellite.yaml")$indices |> names())
                      , tar_target(name = indice
                                   , command = make_indice(indice = indices
@@ -131,7 +153,7 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$indices)) {
                                                           )
                                   )
                      )
-  
+
 }
 
 list(targets
