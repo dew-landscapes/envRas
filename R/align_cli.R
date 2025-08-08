@@ -1,50 +1,34 @@
   
-  align_cli <- function(paths
-                        , out_file
-                        , func = "median"
-                        , scale = 1
-                        , offset = 0
-                        , base = NULL
-                        ) {
+align_cli <- function(cli_ras_path
+                      , settings
+                      , base_grid_file
+                      ) {
+  
+  out_file <- gsub("__1000", paste0("__", settings$grain$res), cli_ras_path)
+  
+  fs::dir_create(dirname(out_file))
+  
+  base <- terra::rast(base_grid_file)
+  
+  r <- terra::rast(cli_ras_path) |>
+    terra::project(terra::crs(base)
+                   , method = "near"
+                   )
+  
+  ratio <- terra::res(r) / terra::res(base)
     
-    r <- terra::app(x = terra::rast(paths)
-                    , fun = func
-                    , na.rm = TRUE
-                    )
+  rat_1 <- floor(sqrt(ratio))
+  
+  r <- r |>
+    terra::disagg(rat_1
+                  , method = "bilinear"
+                  ) |>
+    terra::project(base
+                   , method = "bilinear"
+                   , filename = out_file
+                   )
     
-    names(r) <- gsub("\\.tif", "", basename(out_file))
-    
-    if(!is.null(base)) {
-      
-      r <- r %>%
-        terra::project(terra::crs(base)
-                       , method = "near"
-                       )
-    
-      ratio <- terra::res(r) / terra::res(base)
-      
-      rat_1 <- floor(sqrt(ratio))
-      
-      r <- r %>%
-        terra::disagg(rat_1
-                      , method = "bilinear"
-                      ) %>%
-        terra::project(base
-                       , method = "bilinear"
-                       )
-      
-    }
-    
-    terra::writeRaster(r
-                       , filename = out_file
-                       , names = gsub("\\.tif", "", basename(out_file))
-                       , datatype = "INT2S"
-                       , scale = scale
-                       , offset = offset
-                       , gdal = c("COMPRESS = NONE")
-                       )
-      
-    return(invisible(NULL))
-    
-  }
+  return(out_file)
+  
+}
   
