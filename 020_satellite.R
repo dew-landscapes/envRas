@@ -9,7 +9,7 @@ library(crew.cluster)
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/save_cube_layer.R"
+tar_source(c("R/save_satellite_layer.R"
              , "R/make_indice.R"
              )
            )
@@ -93,7 +93,7 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$layers)) {
 
   layers <- tar_map(values = list(layers = yaml::read_yaml("settings/satellite.yaml")$layers)
                     , tar_target(name = layer
-                                 , command = save_cube_layer(items = items
+                                 , command = save_satellite_layer(items = items
                                                              , base_grid = base_grid
                                                              , layer = layers
                                                              , start_date = min_date
@@ -120,7 +120,7 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$variability)) {
 
   variability <- tar_map(values = list(layers = yaml::read_yaml("settings/satellite.yaml")$variability)
                          , tar_target(name = variability
-                                      , command = save_cube_layer(items = items
+                                      , command = save_satellite_layer(items = items
                                                                   , base_grid = base_grid
                                                                   , layer = layers
                                                                   , start_date = min_date
@@ -141,7 +141,7 @@ if(length(yaml::read_yaml("settings/satellite.yaml")$indices)) {
   #### combine layers --------
   comb_layers <- tar_combine(name = layers_comb
                              , layers[["layer"]]
-                             , command = dplyr::bind_rows(!!!.x, .id = "data_name")
+                             , command = dplyr::bind_rows(!!!.x)
                              )
   
   #### calculate -------
