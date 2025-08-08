@@ -26,6 +26,7 @@ align_cli <- function(cli_ras_path
     terra::project(base
                    , method = "bilinear"
                    , filename = out_file
+                   , overwrite = TRUE
                    )
     
   return(out_file)
