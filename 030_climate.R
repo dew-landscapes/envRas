@@ -19,8 +19,10 @@ tar_source(c("R/save_climate_layer.R"
 mappings <- yaml::read_yaml("settings/climate.yaml")$layers
 
 # tar options --------
+# This partially ran in parallel (maybe 2-3 out of 6 layers returned before error)
+  # but would usually fail in parallel with: error in `RNetCDF::open.nc()`: ! NetCDF: Write to read only
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               # , controller = crew_controller_local(workers = floor(length(mappings) / 2) # number of cores downloading from DEA
+               # , controller = crew_controller_local(workers = length(mappings) # number of cores downloading from DEA
                #                                      , crashes_max = 0L
                #                                      , options_local = crew_options_local(log_directory = fs::path(tars$satellite$store, "log"))
                #                                      )
@@ -94,12 +96,14 @@ downloads <- tar_map(values = tibble::tibble(layers = mappings)
                                                                  , bbox = sf::st_bbox(terra::rast(base_grid_file))
                                                                  , base_dir = cube_directory_climate
                                                                  )
+                                  , format = "file"
                                   )
                      , tar_target(name = munged
                                   , command = align_cli(cli_ras_path = download
                                                         , settings
                                                         , base_grid_file = base_grid_file
                                                         )
+                                  , format = "file"
                                   )
                      )
 
