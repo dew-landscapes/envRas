@@ -25,11 +25,6 @@ tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$
                # , retrieval = "worker"
                )
 
-# from setup --------
-tar_load(c(cube_directory)
-         , store = tars$setup$store
-         )
-
 targets <- list(
   # targets --------
   ## settings -------
@@ -49,6 +44,47 @@ targets <- list(
   , tar_target(settings_satellite
                , yaml::read_yaml(set_file_satellite)
                )
+  ## external objects ------
+  , tar_target(extent_sf_file
+               , fs::path(tars$setup$store, "objects", "extent_sf")
+               , format = "file"
+               )
+  , tar_target(extent_sf
+               , readRDS(extent_sf_file)
+               )
+  ## cube directory ------
+  , tar_target(cube_directory
+               , name_env_tif(x = c(settings$extent
+                                    , settings$grain
+                                    , source = settings_satellite$source
+                                    , collection = settings_satellite$collection
+                                    )
+                              , context_defn = c("vector", "filt_col", "filt_level", "buffer")
+                              , cube_defn = c("temp", "res")
+                              , dir_only = TRUE
+                              , prefixes = c("sat", "use")
+                              , fill_null = TRUE
+                              )$out_dir %>%
+                 fs::path("I:", .)
+               )
+  ## make cube directory --------
+  , tar_target(make_cube_dir
+               , fs::dir_create(cube_directory)
+               , format = "file"
+               )
+  ### base grid -------
+  , tar_target(base_grid_path
+               , make_base_grid(aoi = extent_sf
+                                , out_res = settings$grain$res
+                                , out_epsg = settings$crs$proj
+                                , use_mask = extent_sf
+                                , out_file = fs::path(dirname(make_cube_dir), "base.tif")
+                                , overwrite = TRUE
+                                , ret = "path"
+                                , datatype = "INT1U"
+                                )
+               , format = "file"
+               )
   ## prep -------
   ### dates -------
   , tar_target(name = max_date
@@ -57,17 +93,9 @@ targets <- list(
   , tar_target(name = min_date
                , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
                )
-  ### base grid -------
-  , tar_target(base_grid_file
-               , fs::path(tars$setup$store, "objects", "base_grid")
-               , format = "file"
-               )
-  , tar_terra_rast(base_grid
-                   , terra::rast(base_grid_file)
-                   )
   #### bbox -------
   , tar_target(bbox
-               , sf::st_bbox(base_grid) |>
+               , sf::st_bbox(terra::rast(base_grid_path)) |>
                  sf::st_as_sfc() |>
                  sf::st_transform(crs = settings$crs$decdeg) |> # need decimal lat/long for rstac
                  sf::st_bbox()
@@ -85,82 +113,73 @@ targets <- list(
                  rstac::get_request() |>
                  rstac::items_fetch()
                )
+  ## layers --------
+  ### layer df --------
+  , tar_target(layer_df
+               , tibble::tibble(layer = settings_satellite$layers)
+               )
+  ### download --------
+  , tar_target(name = layer
+               , command = save_satellite_layer(items = items
+                                                , base_grid = terra::rast(base_grid_path)
+                                                , layer = layer_df$layer
+                                                , start_date = min_date
+                                                , end_date = max_date
+                                                , cloud_mask = NULL
+                                                , base_dir = cube_directory
+                                                , settings = c(settings, settings_satellite)
+                                                , force_new = TRUE
+                                                # gdalcubes::write_tif args
+                                                , pack = list(type = "int16"
+                                                              , scale = 1
+                                                              , offset = 0
+                                                              , nodata = -999
+                                                              )
+                                                )
+               , pattern = map(layer_df)
+               , format = "file"
+               )
+  ## variability-----
+  ### variability_df------
+  , tar_target(name = variability_df
+               , tibble::tibble(layer = settings_satellite$variability)
+               )
+  ### download --------
+  , tar_target(name = variability
+               , command = save_satellite_layer(items = items
+                                                , base_grid = terra::rast(base_grid_path)
+                                                , layer = variability_df$layer
+                                                , start_date = min_date
+                                                , end_date = max_date
+                                                , cloud_mask = NULL
+                                                , base_dir = cube_directory
+                                                , settings = c(settings, settings_satellite)
+                                                , force_new = TRUE
+                                                # no pack
+                                                )
+               , pattern = map(variability_df)
+               , format = "file"
+               )
+  ## indices------
+  ### indices list --------
+  , tar_target(indice_list
+               , settings_satellite$indices
+               )
+  ### layers --------
+  , tar_target(combined_layers
+               , layer |>
+                 purrr::set_names(settings_satellite$layers)
+               )
+  ### mung -------
+  , tar_target(name = indice
+               , command = make_indice(indice = indice_list[1]
+                                       , start_date = min_date
+                                       , layers = combined_layers
+                                       , base_dir = cube_directory
+                                       , settings = settings_satellite
+                                       , force_new = TRUE
+                                       )
+               , pattern = map(indice_list)
+               , format = "file"
+               )
   )
-
-## get data --------
-### layers --------
-if(length(yaml::read_yaml("settings/satellite.yaml")$layers)) {
-
-  layers <- tar_map(values = list(layers = yaml::read_yaml("settings/satellite.yaml")$layers)
-                    , tar_target(name = layer
-                                 , command = save_satellite_layer(items = items
-                                                             , base_grid = base_grid
-                                                             , layer = layers
-                                                             , start_date = min_date
-                                                             , end_date = max_date
-                                                             , cloud_mask = NULL
-                                                             , base_dir = cube_directory
-                                                             , settings = c(settings, settings_satellite)
-                                                             # gdalcubes::write_tif args
-                                                             , pack = list(type = "int16"
-                                                                           , scale = 1
-                                                                           , offset = 0
-                                                                           , nodata = -999
-                                                                           )
-                                                             )
-                                 )
-                    )
-
-}
-
-
-
-### variabilities ----------
-if(length(yaml::read_yaml("settings/satellite.yaml")$variability)) {
-
-  variability <- tar_map(values = list(layers = yaml::read_yaml("settings/satellite.yaml")$variability)
-                         , tar_target(name = variability
-                                      , command = save_satellite_layer(items = items
-                                                                  , base_grid = base_grid
-                                                                  , layer = layers
-                                                                  , start_date = min_date
-                                                                  , end_date = max_date
-                                                                  , cloud_mask = NULL
-                                                                  , base_dir = cube_directory
-                                                                  , settings = c(settings, settings_satellite)
-                                                                  # no pack
-                                                                  )
-                                      )
-                         )
-
-}
-
-### indices -------
-if(length(yaml::read_yaml("settings/satellite.yaml")$indices)) {
-  
-  #### combine layers --------
-  comb_layers <- tar_combine(name = layers_comb
-                             , layers[["layer"]]
-                             , command = dplyr::bind_rows(!!!.x)
-                             )
-  
-  #### calculate -------
-  indices <- tar_map(values = list(indices = yaml::read_yaml("settings/satellite.yaml")$indices |> names())
-                     , tar_target(name = indice
-                                  , command = make_indice(indice = indices
-                                                          , start_date = min_date
-                                                          , layers = layers_comb
-                                                          , base_dir = cube_directory
-                                                          , settings = settings_satellite
-                                                          )
-                                  )
-                     )
-
-}
-
-list(targets
-     , if(exists("layers")) layers
-     , if(exists("comb_layers")) comb_layers
-     , if(exists("variability")) variability
-     , if(exists("indices")) indices
-     )

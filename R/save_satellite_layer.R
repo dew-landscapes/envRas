@@ -59,7 +59,7 @@ save_satellite_layer <- function(items
     
   }
   
-  return(res)
+  return(out_file)
   
 }
 

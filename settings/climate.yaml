@@ -1,6 +1,7 @@
 
-# climate ------
+# directories
 grain:
+  temp: "P10Y"
   res: 1000
 
 source: "NCI"
@@ -10,9 +11,9 @@ source_url: "https://thredds.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stabl
 collection: "ANUClimate2"
   
 layers:
-  - "rain"
-  - "evap"
-  - "tavg"
-  - "vpd"
   - "tmin"
   - "tmax"
+  - "tavg"
+  - "rain"
+  - "evap"
+  - "vpd"
