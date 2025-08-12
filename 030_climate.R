@@ -19,10 +19,8 @@ tar_source(c("R/download_nc.R"
 mappings <- yaml::read_yaml("settings/climate.yaml")$layers
 
 # tar options --------
-# This partially ran in parallel (maybe 2-3 out of 6 layers returned before error)
-  # but would usually fail in parallel with: error in `RNetCDF::open.nc()`: ! NetCDF: Write to read only
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               , controller = crew_controller_local(workers = length(mappings) # number of cores downloading from DEA
+               , controller = crew_controller_local(workers = 10 # downloading from NCI on main so not parallel
                                                     , crashes_max = 0L
                                                     , options_local = crew_options_local(log_directory = fs::path(tars$satellite$store, "log"))
                                                     )
@@ -150,11 +148,13 @@ targets <- list(
               , command = download_nc(save_file = download_files_df$out_file
                                       , remote_files = download_files_df$remote_files[[1]]$remote_file
                                       , bbox = bbox
-                                      , force_new = TRUE
+                                      , force_new = FALSE
                                       )
               , pattern = map(download_files_df)
               , format = "file"
               , deployment = "main"
+              # This partially ran in parallel (maybe 2-3 out of 6 layers returned before error)
+              # but would usually fail in parallel with: error in `RNetCDF::open.nc()`: ! NetCDF: Write to read only
               )
   ## bioclim ------
   , tar_target(bioclim_files_df
@@ -166,7 +166,7 @@ targets <- list(
                , command = make_bioclim_rasters(bioclim_files_df
                                                 , out_dir = cube_directory
                                                 , start_date = min_date
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 )
                , format = "file"
                )
