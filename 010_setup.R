@@ -34,13 +34,12 @@ list(
                , command = yaml::read_yaml(set_file)
                , deployment = "main"
                )
-  ## cube directory
+  ## extent directory -------
   , tar_target(extent_dir
                , envFunc::name_env_out(set_list = list(extent = settings$extent)
                                        , base_dir = "I:"
                                        )$path |>
                  fs::dir_create()
-               , format = "file"
                )
   ## maps -------
   ### extent sf -------
