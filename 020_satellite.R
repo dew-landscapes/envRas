@@ -16,14 +16,7 @@ tar_source(c("R/save_satellite_layer.R"
 
 # tar options --------
 # parallel over individual layer rather than across layers, so no need for crew_controller_local etc
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               # , controller = crew_controller_local(workers = floor(parallel::detectCores() * 2 / 3) # number of cores downloading from DEA
-               #                                      , crashes_max = 0L
-               #                                      , options_local = crew_options_local(log_directory = fs::path(tars$satellite$store, "log"))
-               #                                      )
-               # , storage = "worker"
-               # , retrieval = "worker"
-               )
+tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages)))
 
 targets <- list(
   # targets --------
