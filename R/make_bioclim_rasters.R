@@ -27,6 +27,7 @@ make_bioclim_rasters <- function(files_df
                
                  terra::writeRaster(bc[x]
                                     , filename = out_file
+                                    , overwrite = TRUE
                                     )
                  
                }
