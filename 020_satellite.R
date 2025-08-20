@@ -63,7 +63,6 @@ targets <- list(
   ## make cube directory --------
   , tar_target(make_cube_dir
                , fs::dir_create(cube_directory)
-               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
