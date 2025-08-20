@@ -1,0 +1,9 @@
+
+# satellite ------
+source: "DEW"
+
+collection: "distance_to"
+  
+layers:
+  - "coast"
+  - "water"
