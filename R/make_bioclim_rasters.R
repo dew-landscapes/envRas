@@ -4,12 +4,11 @@ make_bioclim_rasters <- function(files_df
                                  , force_new = FALSE
                                  ) {
   
-  bc <- bioclima::clima(bios = c(1:19, 28:35)
+  bc <- bioclima::clima(bios = c(1:19)
                         , tmin = terra::rast(files_df$files[files_df$layer == "tmin"][[1]]$path)
                         , tmax = terra::rast(files_df$files[files_df$layer == "tmax"][[1]]$path)
                         , tavg = terra::rast(files_df$files[files_df$layer == "tavg"][[1]]$path)
                         , prcp = terra::rast(files_df$files[files_df$layer == "rain"][[1]]$path)
-                        , mois = terra::rast(files_df$files[files_df$layer == "vpd"][[1]]$path)
                         )
   
   purrr::map(names(bc)
@@ -17,6 +16,8 @@ make_bioclim_rasters <- function(files_df
                
                out_file <- fs::path(out_dir
                                     , paste0(x
+                                             , "__"
+                                             , x
                                              , "__"
                                              , start_date
                                              , ".tif"

@@ -119,7 +119,7 @@ targets <- list(
                                                 , end_date = max_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
-                                                , settings = c(settings, settings_satellite)
+                                                , period = settings$grain$temp
                                                 , force_new = TRUE
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
@@ -131,21 +131,39 @@ targets <- list(
                , pattern = map(layer_df)
                , format = "file"
                )
-  ## variability-----
+  ## variability -----
   ### variability_df------
   , tar_target(name = variability_df
                , tibble::tibble(layer = settings_satellite$variability)
                )
-  ### download --------
+  ### download mean --------
   , tar_target(name = variability
                , command = save_satellite_layer(items = items
                                                 , base_grid = terra::rast(base_grid_path)
                                                 , layer = variability_df$layer
+                                                , agg_func = "mean"
                                                 , start_date = min_date
                                                 , end_date = max_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
-                                                , settings = c(settings, settings_satellite)
+                                                , period = settings$grain$temp
+                                                , force_new = TRUE
+                                                # no pack
+                                                )
+               , pattern = map(variability_df)
+               , format = "file"
+               )
+  ### download max --------
+  , tar_target(name = max
+               , command = save_satellite_layer(items = items
+                                                , base_grid = terra::rast(base_grid_path)
+                                                , layer = variability_df$layer
+                                                , agg_func = "max"
+                                                , start_date = min_date
+                                                , end_date = max_date
+                                                , cloud_mask = NULL
+                                                , base_dir = cube_directory
+                                                , period = settings$grain$temp
                                                 , force_new = TRUE
                                                 # no pack
                                                 )

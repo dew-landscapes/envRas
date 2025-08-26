@@ -3,18 +3,19 @@ save_satellite_layer <- function(items
                             , base_grid
                             , bbox
                             , layer
+                            , agg_func = "median"
                             , start_date
                             , end_date
                             , cloud_mask = NULL
                             , base_dir
-                            , settings
+                            , period
                             , cores = parallel::detectCores() * 3 / 4
                             , force_new = TRUE
                             , ...
                             ) {
   
   out_file <- fs::path(base_dir
-                       , paste0(layer, "__", start_date, ".tif")
+                       , paste0(layer, "__", agg_func, "__", start_date, ".tif")
                        )
   
   if(any(!file.exists(out_file), force_new)) {
@@ -37,9 +38,9 @@ save_satellite_layer <- function(items
     view <- gdalcubes::cube_view(srs = paste0("EPSG:", terra::crs(base_grid, describe = T)$code)
                                  , dx = terra::res(base_grid)[1]
                                  , dy = terra::res(base_grid)[2]
-                                 , dt = settings$grain$temp
+                                 , dt = period
                                  , extent = use_extent
-                                 , aggregation = "median"
+                                 , aggregation = agg_func
                                  , resampling = "bilinear"
                                  )
     
@@ -52,6 +53,8 @@ save_satellite_layer <- function(items
     res <- gdalcubes::write_tif(r
                                 , dir = base_dir
                                 , prefix = paste0(layer
+                                                  , "__"
+                                                  , agg_func
                                                   , "__"
                                                   )
                                 , ...

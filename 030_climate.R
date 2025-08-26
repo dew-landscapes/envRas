@@ -1,6 +1,5 @@
 
 library(targets)
-library(geotargets)
 library(tarchetypes)
 library(crew)
 library(crew.cluster)
@@ -22,7 +21,7 @@ mappings <- yaml::read_yaml("settings/climate.yaml")$layers
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
                , controller = crew_controller_local(workers = 10 # downloading from NCI on main so not parallel
                                                     , crashes_max = 0L
-                                                    , options_local = crew_options_local(log_directory = fs::path(tars$satellite$store, "log"))
+                                                    , options_local = crew_options_local(log_directory = fs::path(tars$climate$store, "log"))
                                                     )
                )
 
@@ -71,7 +70,6 @@ targets <- list(
   ### make cube directory --------
   , tar_target(make_cube_dir
                , fs::dir_create(cube_directory)
-               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -112,7 +110,11 @@ targets <- list(
                  tidyr::unnest(cols = c(years)) |>
                  dplyr::cross_join(tibble::tibble(month = stringr::str_pad(1:12, 2, pad = 0))) |>
                  dplyr::cross_join(tibble::tibble(layer = settings_climate$layers)) |>
-                 dplyr::mutate(remote_file = paste0(settings_climate$source_url
+                 dplyr::mutate(func = dplyr::case_when(grepl("min", layer) ~ "min"
+                                                       , grepl("max", layer) ~ "max"
+                                                       , TRUE ~ "mean"
+                                                       )
+                               , remote_file = paste0(settings_climate$source_url
                                                       , "/"
                                                       , layer
                                                       , "/"
@@ -137,6 +139,8 @@ targets <- list(
                                , out_file = fs::path(cube_directory
                                                      , paste0(layer
                                                               , "__"
+                                                              , func
+                                                              , "__"
                                                               , start_date
                                                               , ".tif"
                                                               )
@@ -148,6 +152,7 @@ targets <- list(
               , command = download_nc(save_file = download_files_df$out_file
                                       , remote_files = download_files_df$remote_files[[1]]$remote_file
                                       , bbox = bbox
+                                      , func = download_files_df$func
                                       , force_new = FALSE
                                       )
               , pattern = map(download_files_df)

@@ -2,7 +2,7 @@ download_nc <- function(save_file
                         , remote_files
                         , bbox
                         , files_epsg = 4283
-                        , func = mean
+                        , func = "mean"
                         , force_new = FALSE
                         ) {
   
@@ -34,7 +34,7 @@ download_nc <- function(save_file
         do.call("c", .) |>
         stars::st_redimension() |>
         terra::rast() |>
-        terra::app(fun = func
+        terra::app(fun = get(func)
                    , filename = save_file
                    , overwrite = TRUE
                    , wopt = list(names = gsub("__.*", "", basename(save_file)))

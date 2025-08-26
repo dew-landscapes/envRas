@@ -7,7 +7,7 @@ make_indice <- function(indice
                         , force_new = TRUE
                         ) {
   
-  out_file <- fs::path(base_dir, paste0(names(indice), "__", start_date, ".tif"))
+  out_file <- fs::path(base_dir, paste0(names(indice), "__index__", start_date, ".tif"))
   
   if(any(! file.exists(out_file), force_new)) {
   
