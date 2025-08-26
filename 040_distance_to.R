@@ -1,6 +1,7 @@
 
 library(targets)
 library(tarchetypes)
+library(geotargets)
 library(crew)
 library(crew.cluster)
 
@@ -10,8 +11,22 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_dist_rast.R"))
 
+# cores --------
+use_cores <- floor(parallel::detectCores() * 3 / 4)
+
+# ram -------
+total_terra_ram_prop <- 0.6 # across all cores
+terra_memfrac <- total_terra_ram_prop / use_cores # prop of available memory allowed per core (or per tile)
+
 # tar options --------
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages)))
+tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
+               , controller = crew_controller_local(workers = use_cores
+                                                    , crashes_max = 0L
+                                                    , options_local = crew_options_local(log_directory = fs::path(tars$distance_to$store, "log")
+                                                                                         , log_join = TRUE
+                                                                                         )
+                                                    )
+               )
 
 targets <- list(
   # targets --------
@@ -60,27 +75,40 @@ targets <- list(
   , tar_target(coast_sf
                , sfarrow::st_read_parquet(coast_file)
                )
-  ### water -------
-  , tar_target(water_file
-               , fs::path("..", "..", "..", "data", "vector", "water_lines.parquet")
-               , format = "file"
-               )
-  , tar_target(water_sf
-               , sfarrow::st_read_parquet(water_file)
-               )
   ### base grid -------
   , tar_target(base_grid_path
                , fs::path(dirname(cube_directory), "base.tif")
-               , format = "file"
                )
   ## coast--------
+  ### split -------
+  , tar_target(name = tile_extents
+               , make_tile_extents(base_grid_path = base_grid_path
+                                   , tile_size = 50000
+                                   )
+               )
+  ### apply -------
+  , tar_target(use_memfrac
+               , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
+                 {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
+               )
+  , tar_terra_rast(tile_result
+                   , make_dist_rast(base_grid_path
+                                    , tile_extents
+                                    , sf = coast_sf
+                                    , terra_options = list(memfrac = use_memfrac)
+                                    )
+                   , datatype = "INT4S" # integer metre accuracy
+                   , pattern = map(tile_extents)
+                   )
+  ### combine -------
   , tar_target(coast
-               , make_dist_rast(base_grid_path
-                                , sf = coast_sf
-                                , out_file = fs::path(cube_directory
-                                                      , "coast.tif"
-                                                      )
-                                )
-               , format = "file"
+               , combine_tiles(tile_result
+                               , out_file = fs::path(cube_directory
+                                                     , "coast__distance__2025-01-01.tif"
+                                                     )
+                               # passed via ... to terra::merge()
+                               , datatype = "INT4S"
+                               , overwrite = TRUE
+                               )
                )
   )

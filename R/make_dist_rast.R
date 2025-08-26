@@ -1,39 +1,38 @@
 make_dist_rast <- function(base_grid_path
+                           , extent = NULL
                            , sf
-                           , out_file
                            , terra_options = NULL
-                           , force_new = FALSE
                            ) {
   
-  if(any(!file.exists(out_file), force_new)) {
+  
     
-    r <- terra::rast(base_grid_path)
+  ## terra options -------
+  if(!is.null(terra_options)) {
+
+    do.call(terra::terraOptions
+            , args = terra_options
+            )
+
+  }
     
-    if(! all.equal(sf::st_crs(sf), sf::st_crs(r))) {
-      
-      sf <- sf |>
-        sf::st_transform(crs = sf::st_crs(r)) |>
-        sf::st_make_valid()
-      
-    }
+  r <- terra::rast(base_grid_path)
     
-    ## terra options -------
-    if(!is.null(terra_options)) {
-      
-      do.call(terra::terraOptions
-              , args = terra_options
-              )
-      
-    }
+  if(!is.null(extent)) {
     
-    terra::distance(r
-                    , y = sf
-                    , filename = out_file
-                    , wopt = list(datatype = "INT4S")
-                    )
+    terra::window(r) <-  terra::ext(as.numeric(extent[1, 1:4]))
     
   }
-  
-  return(out_file)
+    
+  if(! all.equal(sf::st_crs(sf), sf::st_crs(r))) {
+    
+    sf <- sf |>
+      sf::st_transform(crs = sf::st_crs(r)) |>
+      sf::st_make_valid()
+    
+  }
+    
+  terra::distance(r
+                  , y = sf
+                  )
   
 }
