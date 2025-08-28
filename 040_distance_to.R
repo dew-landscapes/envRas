@@ -9,7 +9,10 @@ library(crew.cluster)
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/make_dist_rast.R"))
+tar_source(c("R/make_dist_rast.R"
+             , "R/terra_reproject.R"
+             )
+           )
 
 # cores --------
 use_cores <- floor(parallel::detectCores() * 3 / 4)
@@ -28,8 +31,8 @@ tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$
                                                     )
                )
 
+# targets --------
 targets <- list(
-  # targets --------
   ## settings -------
   ### setup -------
   tar_target(name = set_file
@@ -62,7 +65,7 @@ targets <- list(
                               )$out_dir %>%
                  fs::path("I:", .)
                )
-  ### make cube directory --------
+  ## make cube directory --------
   , tar_target(make_cube_dir
                , fs::dir_create(cube_directory)
                )
@@ -75,40 +78,157 @@ targets <- list(
   , tar_target(coast_sf
                , sfarrow::st_read_parquet(coast_file)
                )
+  , tar_target(coast_sf_line
+               , coast_sf |>
+                 sf::st_transform(crs = sf::st_crs(terra::rast(base_grid_path))) |>
+                 sf::st_make_valid() |>
+                 sf::st_cast("MULTILINESTRING") |>
+                 sf::st_cast("LINESTRING")
+               )
+  ### water -------
+  , tar_target(water_file
+               , fs::path("..", "..", "..", "data", "vector", "water_lines.parquet")
+               , format = "file"
+               )
+  , tar_target(water_sf_line
+               , sfarrow::st_read_parquet(water_file) |>
+                 sf::st_transform(crs = sf::st_crs(terra::rast(base_grid_path))) |>
+                 sf::st_make_valid() |>
+                 sf::st_cast("MULTILINESTRING") |>
+                 sf::st_cast("LINESTRING")
+               )
   ### base grid -------
   , tar_target(base_grid_path
                , fs::path(dirname(cube_directory), "base.tif")
                )
-  ## coast--------
-  ### split -------
-  , tar_target(name = tile_extents
-               , make_tile_extents(base_grid_path = base_grid_path
-                                   , tile_size = 50000
+  ## prep -------
+  ### dates -------
+  , tar_target(name = max_date
+               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31") 
+               )
+  , tar_target(name = min_date
+               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
+               )
+  ### files --------
+  , tar_target(coast_tif_file
+                 , fs::path(cube_directory
+                            , paste0("coast__distance__"
+                                     , min_date
+                                     , ".tif"
+                                     )
+                            )
+                 )
+  , tar_target(water_tif_file
+                 , fs::path(cube_directory
+                            , paste0("water__distance__"
+                                     , min_date
+                                     , ".tif"
+                                     )
+                            )
+                 )
+)
+
+# 90 m targets ----------
+if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
+  
+  distance <- list(
+    ## split -------
+    tar_target(name = tile_extents
+               , make_tile_extents(base_grid_path = base_grid_path)
+               )
+    
+    , tar_target(use_memfrac
+                 , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
+                   {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
+                 )
+    ## coast--------
+    ### apply -------
+    , tar_terra_rast(tile_coast
+                     , make_dist_rast(base_grid_path
+                                      , tile_extents
+                                      , sf_line = coast_sf_line
+                                      , terra_options = list(memfrac = use_memfrac)
+                                      )
+                     , datatype = "INT4S" # integer metre accuracy
+                     , pattern = map(tile_extents)
+                     )
+    ### combine -------
+    , tar_target(coast
+                 , combine_tiles(tile_coast
+                                 , out_file = coast_tif_file
+                                 # passed via ... to terra::merge()
+                                 , datatype = "INT4S"
+                                 , overwrite = TRUE
+                                 , wopt = list(gdal = c("TILED=YES"
+                                                        , "COPY_SRC_OVERVIEWS=YES"
+                                                        , "COMPRESS=DEFLATE"
+                                                        )
+                                               )
+                                 )
+                 , format = "file"
+                 )
+    # ## water--------
+    # ### apply -------
+    # , tar_terra_rast(tile_water
+    #                  , make_dist_rast(base_grid_path
+    #                                   , tile_extents
+    #                                   , sf_line = water_sf_line
+    #                                   , terra_options = list(memfrac = use_memfrac)
+    #                                   )
+    #                  , datatype = "INT4S" # integer metre accuracy
+    #                  , pattern = map(tile_extents)
+    #                  )
+    # ### combine -------
+    # , tar_target(water
+    #              , combine_tiles(tile_water
+    #                              , out_file = water_tif_file
+    #                              # passed via ... to terra::merge()
+    #                              , datatype = "INT4S"
+    #                              , overwrite = TRUE
+    #                              , wopt = list(gdal = c("TILED=YES"
+    #                                                     , "COPY_SRC_OVERVIEWS=YES"
+    #                                                     , "COMPRESS=DEFLATE"
+    #                                                     )
+    #                                            )
+    #                              )
+    #              , format = "file"
+    #              )
+    )
+  
+}
+
+
+# not 90 m targets ---------
+if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
+  
+  distance <- list(
+    ## coast -------
+    , tar_target(coast
+                 , terra_reproject(in_file = gsub("__\\d{2}"
+                                                  , "__90"
+                                                  , x = fs::path(coast_tif_file)
+                                                  )
+                                   , y = base_grid_path
+                                   , filename = fs::path(coast_tif_file)
+                                   , method = "bilinear"
+                                   , datatype = "INT4S"
+                                   , overwrite = TRUE
                                    )
-               )
-  ### apply -------
-  , tar_target(use_memfrac
-               , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
-                 {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
-               )
-  , tar_terra_rast(tile_result
-                   , make_dist_rast(base_grid_path
-                                    , tile_extents
-                                    , sf = coast_sf
-                                    , terra_options = list(memfrac = use_memfrac)
-                                    )
-                   , datatype = "INT4S" # integer metre accuracy
-                   , pattern = map(tile_extents)
-                   )
-  ### combine -------
-  , tar_target(coast
-               , combine_tiles(tile_result
-                               , out_file = fs::path(cube_directory
-                                                     , "coast__distance__2025-01-01.tif"
-                                                     )
-                               # passed via ... to terra::merge()
-                               , datatype = "INT4S"
-                               , overwrite = TRUE
-                               )
-               )
+                 )
+    , tar_target(water
+                 , terra_reproject(in_file = gsub("__\\d{2}"
+                                                  , "__90"
+                                                  , x = fs::path(water_tif_file)
+                                                  )
+                                   , y = base_grid_path
+                                   , filename = fs::path(water_tif_file)
+                                   , method = "bilinear"
+                                   , datatype = "INT4S"
+                                   , overwrite = TRUE
+                                   )
+                 )
   )
+  
+}
+
+list(targets, distance)
