@@ -1,7 +1,7 @@
 make_bioclim_rasters <- function(files_df
                                  , out_dir
                                  , start_date
-                                 , force_new = FALSE
+                                 , force_new = TRUE
                                  ) {
   
   bc <- bioclima::clima(bios = c(1:19)
