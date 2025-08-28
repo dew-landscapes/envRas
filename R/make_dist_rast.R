@@ -1,11 +1,10 @@
 make_dist_rast <- function(base_grid_path
                            , extent = NULL
-                           , sf
+                           , sf_line
                            , terra_options = NULL
+                           , name = "distance"
                            ) {
   
-  
-    
   ## terra options -------
   if(!is.null(terra_options)) {
 
@@ -23,16 +22,9 @@ make_dist_rast <- function(base_grid_path
     
   }
     
-  if(! all.equal(sf::st_crs(sf), sf::st_crs(r))) {
-    
-    sf <- sf |>
-      sf::st_transform(crs = sf::st_crs(r)) |>
-      sf::st_make_valid()
-    
-  }
-    
   terra::distance(r
-                  , y = sf
+                  , y = terra::vect(sf_line)
+                  , names = name
                   )
   
 }
