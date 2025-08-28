@@ -72,6 +72,7 @@ targets <- list(
                , fs::dir_create(cube_directory)
                )
   ### base grid -------
+  # Not sure this is necessary (could use extent_sf in bbox instead) but will invalidate the downloads if it is removed
   , tar_target(base_grid_path
                , make_base_grid(extent_sf
                                 , out_res = settings_climate$grain$res
@@ -171,7 +172,6 @@ targets <- list(
                , command = make_bioclim_rasters(bioclim_files_df
                                                 , out_dir = cube_directory
                                                 , start_date = min_date
-                                                , force_new = FALSE
                                                 )
                , format = "file"
                )
