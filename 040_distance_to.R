@@ -11,6 +11,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_dist_rast.R"
              , "R/terra_reproject.R"
+             , "R/make_coast_raster.R"
              )
            )
 
@@ -151,20 +152,23 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
                                       )
                      , datatype = "INT4S" # integer metre accuracy
                      , pattern = map(tile_extents)
+                     , cue = tar_cue(mode = "never")
                      )
     ### combine -------
     , tar_target(coast
-                 , combine_tiles(tile_coast
-                                 , out_file = coast_tif_file
-                                 # passed via ... to terra::merge()
-                                 , datatype = "INT4S"
-                                 , overwrite = TRUE
-                                 , wopt = list(gdal = c("TILED=YES"
-                                                        , "COPY_SRC_OVERVIEWS=YES"
-                                                        , "COMPRESS=DEFLATE"
-                                                        )
-                                               )
-                                 )
+                 , make_coast_raster(tiles = tile_coast
+                                     , base_grid_path = base_grid_path
+                                     , coast_sf = coast_sf
+                                     , out_file = coast_tif_file
+                                     # passed via ... to terra::lapp()
+                                     , overwrite = TRUE
+                                     , wopt = list(datatype = "INT4S"
+                                                   , gdal = c("TILED=YES"
+                                                            , "COPY_SRC_OVERVIEWS=YES"
+                                                            , "COMPRESS=DEFLATE"
+                                                            )
+                                                   )
+                                     )
                  , format = "file"
                  )
     # ## water--------
@@ -215,18 +219,18 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
                                    , overwrite = TRUE
                                    )
                  )
-    , tar_target(water
-                 , terra_reproject(in_file = gsub("__\\d{2}"
-                                                  , "__90"
-                                                  , x = fs::path(water_tif_file)
-                                                  )
-                                   , y = base_grid_path
-                                   , filename = fs::path(water_tif_file)
-                                   , method = "bilinear"
-                                   , datatype = "INT4S"
-                                   , overwrite = TRUE
-                                   )
-                 )
+    # , tar_target(water
+    #              , terra_reproject(in_file = gsub("__\\d{2}"
+    #                                               , "__90"
+    #                                               , x = fs::path(water_tif_file)
+    #                                               )
+    #                                , y = base_grid_path
+    #                                , filename = fs::path(water_tif_file)
+    #                                , method = "bilinear"
+    #                                , datatype = "INT4S"
+    #                                , overwrite = TRUE
+    #                                )
+    #              )
   )
   
 }
