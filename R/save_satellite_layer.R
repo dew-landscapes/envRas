@@ -47,7 +47,7 @@ save_satellite_layer <- function(items
     r <- gdalcubes::raster_cube(coll
                                 , view
                                 , mask = if(!is.null(cloud_mask)) cloud_mask else NULL
-                                ) %>%
+                                ) |>
       gdalcubes::select_bands(layer_to_get)
     
     res <- gdalcubes::write_tif(r
