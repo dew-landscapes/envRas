@@ -1,0 +1,10 @@
+
+# wofs ------
+source: "DEA"
+
+source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
+  
+collection: "ga_ls_wo_fq_cyear_3"
+  
+layers:
+  - "frequency"
