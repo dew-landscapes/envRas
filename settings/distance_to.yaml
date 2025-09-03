@@ -1,9 +1,8 @@
 
 # satellite ------
-source: "DEW"
+source: "ABS"
 
 collection: "distance_to"
   
 layers:
   - "coast"
-  - "water"

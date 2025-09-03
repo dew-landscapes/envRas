@@ -77,24 +77,13 @@ targets <- list(
                , format = "file"
                )
   , tar_target(coast_sf
-               , sfarrow::st_read_parquet(coast_file)
+               , arrow::open_dataset(coast_file) |>
+                 sfarrow::read_sf_dataset() |>
+                 sf::st_transform(crs = sf::st_crs(terra::rast(base_grid_path))) |>
+                 sf::st_make_valid()
                )
   , tar_target(coast_sf_line
                , coast_sf |>
-                 sf::st_transform(crs = sf::st_crs(terra::rast(base_grid_path))) |>
-                 sf::st_make_valid() |>
-                 sf::st_cast("MULTILINESTRING") |>
-                 sf::st_cast("LINESTRING")
-               )
-  ### water -------
-  , tar_target(water_file
-               , fs::path("..", "..", "..", "data", "vector", "water_lines.parquet")
-               , format = "file"
-               )
-  , tar_target(water_sf_line
-               , sfarrow::st_read_parquet(water_file) |>
-                 sf::st_transform(crs = sf::st_crs(terra::rast(base_grid_path))) |>
-                 sf::st_make_valid() |>
                  sf::st_cast("MULTILINESTRING") |>
                  sf::st_cast("LINESTRING")
                )
@@ -114,14 +103,6 @@ targets <- list(
   , tar_target(coast_tif_file
                  , fs::path(cube_directory
                             , paste0("coast__distance__"
-                                     , min_date
-                                     , ".tif"
-                                     )
-                            )
-                 )
-  , tar_target(water_tif_file
-                 , fs::path(cube_directory
-                            , paste0("water__distance__"
                                      , min_date
                                      , ".tif"
                                      )
@@ -171,32 +152,6 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
                                      )
                  , format = "file"
                  )
-    # ## water--------
-    # ### apply -------
-    # , tar_terra_rast(tile_water
-    #                  , make_dist_rast(base_grid_path
-    #                                   , tile_extents
-    #                                   , sf_line = water_sf_line
-    #                                   , terra_options = list(memfrac = use_memfrac)
-    #                                   )
-    #                  , datatype = "INT4S" # integer metre accuracy
-    #                  , pattern = map(tile_extents)
-    #                  )
-    # ### combine -------
-    # , tar_target(water
-    #              , combine_tiles(tile_water
-    #                              , out_file = water_tif_file
-    #                              # passed via ... to terra::merge()
-    #                              , datatype = "INT4S"
-    #                              , overwrite = TRUE
-    #                              , wopt = list(gdal = c("TILED=YES"
-    #                                                     , "COPY_SRC_OVERVIEWS=YES"
-    #                                                     , "COMPRESS=DEFLATE"
-    #                                                     )
-    #                                            )
-    #                              )
-    #              , format = "file"
-    #              )
     )
   
 }
@@ -219,18 +174,6 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
                                    , overwrite = TRUE
                                    )
                  )
-    # , tar_target(water
-    #              , terra_reproject(in_file = gsub("__\\d{2}"
-    #                                               , "__90"
-    #                                               , x = fs::path(water_tif_file)
-    #                                               )
-    #                                , y = base_grid_path
-    #                                , filename = fs::path(water_tif_file)
-    #                                , method = "bilinear"
-    #                                , datatype = "INT4S"
-    #                                , overwrite = TRUE
-    #                                )
-    #              )
   )
   
 }
