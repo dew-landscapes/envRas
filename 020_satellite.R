@@ -130,6 +130,7 @@ targets <- list(
                                                 )
                , pattern = map(layer_df)
                , format = "file"
+               , cue = tar_cue(depend = FALSE)
                )
   ## variability -----
   ### variability_df------
@@ -152,6 +153,7 @@ targets <- list(
                                                 )
                , pattern = map(variability_df)
                , format = "file"
+               , cue = tar_cue(depend = FALSE)
                )
   ### download max --------
   , tar_target(name = max
@@ -169,6 +171,7 @@ targets <- list(
                                                 )
                , pattern = map(variability_df)
                , format = "file"
+               , cue = tar_cue(depend = FALSE)
                )
   ## indices------
   ### indices list --------

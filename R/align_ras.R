@@ -4,6 +4,7 @@ align_ras <- function(input_ras_path
                       , in_res
                       , out_res
                       , force_new = TRUE
+                      , proj_method = "bilinear"
                       ) {
   
   out_file <- gsub(paste0("__", in_res)
@@ -19,7 +20,7 @@ align_ras <- function(input_ras_path
     
     r <- terra::rast(input_ras_path) |>
       terra::project(terra::crs(base)
-                     , method = "near"
+                     , method = proj_method
                      )
     
     ratio <- terra::res(r) / terra::res(base)

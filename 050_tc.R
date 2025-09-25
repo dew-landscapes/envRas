@@ -1,4 +1,6 @@
 
+# Tasseled cap
+
 library(targets)
 library(geotargets)
 library(tarchetypes)
@@ -29,13 +31,13 @@ targets <- list(
   , tar_target(name = settings
                , command = yaml::read_yaml(set_file)
                )
-  ### wofs ------
-  , tar_target(set_file_wofs
-               , fs::path("settings/wofs.yaml")
+  ### tc ------
+  , tar_target(set_file_tc
+               , fs::path("settings/tc.yaml")
                , format = "file"
                )
-  , tar_target(settings_wofs
-               , yaml::read_yaml(set_file_wofs)
+  , tar_target(settings_tc
+               , yaml::read_yaml(set_file_tc)
                )
   ## external objects ------
   , tar_target(extent_sf_file
@@ -49,8 +51,8 @@ targets <- list(
   , tar_target(cube_directory
                , name_env_tif(x = c(settings$extent
                                     , settings$grain
-                                    , source = settings_wofs$source
-                                    , collection = settings_wofs$collection
+                                    , source = settings_tc$source
+                                    , collection = settings_tc$collection
                                     )
                               , context_defn = c("vector", "filt_col", "filt_level", "buffer")
                               , cube_defn = c("temp", "res")
@@ -85,8 +87,8 @@ targets <- list(
                )
   ### items ------
   , tar_target(items
-               , rstac::stac(settings_wofs$source_url) |>
-                 rstac::stac_search(collections = settings_wofs$collection
+               , rstac::stac(settings_tc$source_url) |>
+                 rstac::stac_search(collections = settings_tc$collection
                                     , bbox = bbox
                                     , datetime = paste0(as.character(min_date)
                                                         , "/"
@@ -99,14 +101,14 @@ targets <- list(
   ## layers --------
   ### layer df --------
   , tar_target(layer_df
-               , tibble::tibble(layer = settings_wofs$layers)
+               , tibble::tibble(layer = settings_tc$layers)
                )
   ### download --------
   , tar_target(name = layer
                , command = save_satellite_layer(items = items
                                                 , base_grid = terra::rast(base_grid_path)
                                                 , layer = layer_df$layer
-                                                , agg_func = "mean"
+                                                , agg_func = "median"
                                                 , start_date = min_date
                                                 , end_date = max_date
                                                 , cloud_mask = NULL
@@ -118,5 +120,6 @@ targets <- list(
                                                 )
                , pattern = map(layer_df)
                , format = "file"
+               , cue = tar_cue(depend = FALSE)
                )
   )

@@ -1,10 +1,11 @@
 
-# wofs ------
 source: "DEA"
 
 source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
   
-collection: "ga_ls_wo_fq_cyear_3"
+collection: "ga_ls_fc_pc_cyear_3"
   
 layers:
-  - "frequency"
+  - "pv_pc_10"
+  - "bs_pc_10"
+  - "npv_pc_90"

@@ -11,4 +11,4 @@ extent:
   buffer: 0
 grain:
   temp: "P10Y"
-  res: 30
+  res: 90

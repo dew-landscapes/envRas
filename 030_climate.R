@@ -159,6 +159,7 @@ targets <- list(
               , pattern = map(download_files_df)
               , format = "file"
               , deployment = "main"
+              , cue = tar_cue(depend = FALSE)
               # This partially ran in parallel (maybe 2-3 out of 6 layers returned before error)
               # but would usually fail in parallel with: error in `RNetCDF::open.nc()`: ! NetCDF: Write to read only
               )
@@ -185,7 +186,7 @@ targets <- list(
                           )
                )
   , tar_target(name = aligned
-               , command = align_ras(input_ras_path = align_df$path[[1]]
+               , command = align_ras(input_ras_path = align_df$path
                                      , base_grid_path = align_grid_path
                                      , in_res = settings_climate$grain$res
                                      , out_res = settings$grain$res

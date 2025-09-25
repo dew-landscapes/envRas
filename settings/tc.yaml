@@ -1,0 +1,9 @@
+
+source: "DEA"
+
+source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
+  
+collection: "ga_ls_tc_pc_cyear_3"
+  
+layers:
+  - "wet_pc_10"
