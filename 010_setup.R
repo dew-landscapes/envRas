@@ -37,7 +37,7 @@ list(
   ## extent directory -------
   , tar_target(extent_dir
                , envFunc::name_env_out(set_list = list(extent = settings$extent)
-                                       , base_dir = "I:"
+                                       , base_dir = envFunc::get_env_dir(linux_default = "/mnt/envcube", windows_default = "I:")
                                        )$path |>
                  fs::dir_create()
                )
