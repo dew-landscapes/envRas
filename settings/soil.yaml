@@ -1,0 +1,14 @@
+## soil -------
+source: "TERN"
+collection: "SLGA"
+
+grain:
+  temp: "static"
+  res: 90
+  
+version: 2
+
+code:
+  - "CLY"
+  - "SND"
+  - "PHC"
