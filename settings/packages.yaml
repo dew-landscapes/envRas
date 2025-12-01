@@ -30,6 +30,9 @@ packages:
                            
 # raster
     - "terra"
+    - "rstac"
+    - "gdalcubes"
+    - "SLGACloud"
 
 # maps
     - "sf"

@@ -12,25 +12,18 @@ tars <- yaml::read_yaml("_targets.yaml")
 tar_source(c("R/make_dist_rast.R"
              , "R/terra_reproject.R"
              , "R/make_coast_raster.R"
+             , "R/save_soil_layer.R"
              )
            )
 
-# cores --------
-max_cores <- 100
-use_cores <- min(max_cores, floor(parallel::detectCores() * 3 / 4))
-
-# ram -------
-total_terra_ram_prop <- 0.6 # across all cores
-terra_memfrac <- total_terra_ram_prop / use_cores # prop of available memory allowed per core (or per tile)
-
 # tar options --------
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               , controller = crew_controller_local(workers = use_cores
-                                                    , crashes_max = 0L
-                                                    , options_local = crew_options_local(log_directory = fs::path(tars$soil$store, "log")
-                                                                                         , log_join = TRUE
-                                                                                         )
-                                                    )
+               # , controller = crew_controller_local(workers = use_cores
+               #                                      , crashes_max = 0L
+               #                                      , options_local = crew_options_local(log_directory = fs::path(tars$soil$store, "log")
+               #                                                                           , log_join = TRUE
+               #                                                                           )
+               #                                      )
                )
 
 # targets --------
@@ -66,27 +59,15 @@ targets <- list(
                , fs::dir_create(cube_directory)
                )
   ### base grid -------
-  , tar_target(base_grid_path
-               , fs::path(dirname(cube_directory), "base.tif")
-               )
-  ### bbox -------
-  , tar_target(bbox
-               , sf::st_bbox(terra::rast(base_grid_path)) |>
-                 sf::st_as_sfc() |>
-                 terra::vect() |>
-                 terra::densify(50000) |>
-                 sf::st_as_sf() |>
-                 sf::st_transform(crs = settings$crs$decdeg) |>
-                 sf::st_bbox()
-               )
+  , tar_file_read(base_grid_path
+                  , fs::path(tars$satellite$store, "objects", "cube_directory")
+                  , fs::path(dirname(readRDS(!!.x)), "base.tif")
+                  )
   ## download cube -------
   ## prep -------
   ### dates -------
-  , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31") 
-               )
   , tar_target(name = min_date
-               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
+               , command = "static"
                )
   ### files --------
   , tar_target(layer_df
@@ -97,14 +78,27 @@ targets <- list(
                                , grepl("Modelled", Component)
                                ) |>
                  tidyr::nest(data = -c(Source, Code, Attribute)) |>
-                 dplyr::mutate(out_file = fs::path(directory
-                                                   , ""
+                 dplyr::mutate(out_file = fs::path(cube_directory
+                                                   , paste0(Code, "__swm__", min_date, ".tif")
                                                    )
                                )
+               , format = "parquet"
                )
+  ### soil crs --------
+  , tar_target(soil_crs
+               , SLGACloud::cogLoad(layer_df$data[[1]]$COGsPath[[1]]
+                                    , api_key = Sys.getenv("TERN_API_KEY")
+                                    ) |>
+                 terra::crs()
+               )
+  ## get soil data ------
   , tar_target(layer
-               , save_soil_layer(layer_df$data
-                                 
+               , save_soil_layer(paths_df = layer_df$data[[1]]
+                                 , key = Sys.getenv("TERN_API_KEY")
+                                 , in_crs = soil_crs
+                                 , grid_path = base_grid_path
+                                 , out_file = layer_df$out_file
+                                 , force_new = FALSE
                                  )
                , pattern = map(layer_df)
                , format = "file"
