@@ -162,13 +162,13 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
   
   distance <- list(
     ## coast -------
-    , tar_target(coast
-                 , terra_reproject(in_file = gsub("__\\d{2}"
-                                                  , "__90"
+    tar_target(coast
+                 , terra_reproject(in_file = gsub("__\\d{2}\\/"
+                                                  , "__90/"
                                                   , x = fs::path(coast_tif_file)
                                                   )
-                                   , y = base_grid_path
-                                   , filename = fs::path(coast_tif_file)
+                                   , base_grid_path = base_grid_path
+                                   , out_file = coast_tif_file
                                    , method = "bilinear"
                                    , datatype = "INT4S"
                                    , overwrite = TRUE
