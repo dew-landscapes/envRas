@@ -17,7 +17,7 @@ terra_reproject <- function(in_file
   if(any(!file.exists(out_file), force_new)) {
     
     terra::project(terra::rast(in_file)
-                   , y = terra::rast(out_file)
+                   , y = terra::rast(base_grid_path)
                    , ...
                    )
     
