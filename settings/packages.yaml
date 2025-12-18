@@ -33,6 +33,7 @@ packages:
     - "rstac"
     - "gdalcubes"
     - "SLGACloud"
+    - "bioclima"
 
 # maps
     - "sf"
