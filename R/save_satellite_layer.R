@@ -24,7 +24,7 @@ save_satellite_layer <- function(items
     
     layer_to_get <- items |>
       rstac::items_assets() |>
-      grep(paste0("^", layer, "$"), x = _, value = TRUE)
+      grep(paste0(layer, "$"), x = _, value = TRUE)
     
     coll <- gdalcubes::stac_image_collection(items$features
                                              , asset_names = layer_to_get
