@@ -1,3 +1,4 @@
+data_dir: "/mnt/envshare/data"
 # crs
 crs:
   proj: 8059 # for projected

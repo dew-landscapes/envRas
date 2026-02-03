@@ -1,3 +1,6 @@
+watercourse:
+    - "magrittr"
+
 packages:
     - "base"
     
