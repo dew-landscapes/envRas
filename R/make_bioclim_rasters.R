@@ -4,20 +4,20 @@ make_bioclim_rasters <- function(files_df
                                  , force_new = TRUE
                                  ) {
   
-  bc <- bioclima::clima(bios = c(1:19)
-                        , tmin = terra::rast(files_df$files[files_df$layer == "tmin"][[1]]$path)
-                        , tmax = terra::rast(files_df$files[files_df$layer == "tmax"][[1]]$path)
-                        , tavg = terra::rast(files_df$files[files_df$layer == "tavg"][[1]]$path)
-                        , prcp = terra::rast(files_df$files[files_df$layer == "rain"][[1]]$path)
-                        )
+  bc <- predicts::bcvars(prec = terra::rast(files_df$files[files_df$layer == "rain"][[1]]$path)
+                         , tmin = terra::rast(files_df$files[files_df$layer == "tmin"][[1]]$path)
+                         , tmax = terra::rast(files_df$files[files_df$layer == "tmax"][[1]]$path)
+                         )
   
   purrr::map(names(bc)
              , \(x) {
                
+               use_x <- paste0("bio", stringr::str_pad(readr::parse_number(x), width = 2, pad = 0))
+               
                out_file <- fs::path(out_dir
-                                    , paste0(x
+                                    , paste0(use_x
                                              , "__"
-                                             , x
+                                             , use_x
                                              , "__"
                                              , start_date
                                              , ".tif"

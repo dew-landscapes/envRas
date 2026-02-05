@@ -25,15 +25,10 @@ list(
   # targets --------
   ## settings-------
   ### setup -------
-  tar_target(name = set_file
-               , command = fs::path("settings/setup.yaml")
-               , format = "file"
-               , deployment = "main"
-               )
-  , tar_target(name = settings
-               , command = yaml::read_yaml(set_file)
-               , deployment = "main"
-               )
+  tar_file_read(settings
+                , "settings/setup.yaml"
+                , yaml::read_yaml(!!.x)
+                )
   ## extent directory -------
   , tar_target(extent_dir
                , envFunc::name_env_out(set_list = list(extent = settings$extent)
@@ -44,7 +39,7 @@ list(
   ## maps -------
   ### extent sf -------
   , tar_target(name = extent_sf_file
-               , command = fs::path("..", "..", "..", "data", "vector", paste0(settings$extent$vector, ".parquet"))
+               , command = fs::path(settings$data_dir, "vector", paste0(settings$extent$vector, ".parquet"))
                , format = "file"
                )
   , tar_target(name = extent_sf

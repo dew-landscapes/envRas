@@ -1,8 +1,9 @@
 make_dist_tile <- function(base_grid_path
                            , extent
-                           , vect_line_file
+                           , sf_dist_file
                            , terra_options = NULL
-                           , vect_mask_file = NULL
+                           , sf_mask_file = NULL
+                           , sf_mask_positive = TRUE
                            , dist_limit = 10000
                            , out_dir
                            , ...
@@ -26,12 +27,17 @@ make_dist_tile <- function(base_grid_path
   terra::window(r) <-  terra::ext(as.numeric(extent[1, 1:4]))
   
   use_lines <-
-    sf::st_intersection(x = sfarrow::st_read_parquet(vect_line_file)
-                        , y = terra::ext(r) |>
+    sfarrow::st_read_parquet(sf_dist_file) |>
+    # needs lines (not polygons), but incoming could be lines or polygons
+    sf::st_cast("MULTILINESTRING") |>
+    sf::st_cast("LINESTRING") |>
+    # cut back to just the current extent
+    sf::st_intersection(y = terra::ext(r) |>
                           terra::extend(dist_limit) |>
                           terra::as.polygons(crs = terra::crs(r)) |>
                           sf::st_as_sf()
                         ) |>
+    # union to only one feature
     sf::st_union() |>
     terra::vect()
     
@@ -49,10 +55,10 @@ make_dist_tile <- function(base_grid_path
     
   }
   
-  if(!is.null(vect_mask_file)) {
+  if(!is.null(sf_mask_file)) {
     
     use_mask <-
-      sf::st_intersection(x = sfarrow::st_read_parquet(vect_mask_file)
+      sf::st_intersection(x = sfarrow::st_read_parquet(sf_mask_file)
                           , y = terra::ext(r) |>
                             terra::extend(dist_limit) |>
                             terra::as.polygons(crs = terra::crs(r)) |>
@@ -64,7 +70,7 @@ make_dist_tile <- function(base_grid_path
     m <- terra::mask(r
                      , mask = use_mask
                      , updatevalue = -1
-                     , inverse = TRUE
+                     , inverse = ! sf_mask_positive
                      )
     
   } else m <- r

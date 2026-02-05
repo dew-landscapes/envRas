@@ -30,3 +30,22 @@ if(FALSE) {
   tar_meta(fields = any_of("warnings"), complete_only = TRUE, store = tars[[script]]$store)
   
 }
+
+if(FALSE) {
+  
+  cube_dir <- tar_read(cube_directory, store = tars$satellite$store)
+  
+  env_df <- envRaster::name_env_tif(x = dirname(cube_dir), parse = TRUE) |>
+    dplyr::mutate(start_date = as.Date(start_date)) |>
+    dplyr::group_by(layer, func) |>
+    dplyr::filter(start_date == max(start_date)) |>
+    dplyr::ungroup()
+  
+  env_df |>
+    dplyr::pull(path)|>
+    purrr::walk(\(x) terra::rast(x) |>
+                  terra::plot(main = gsub("\\.tif", "", basename(x)))
+                )
+  
+}
+

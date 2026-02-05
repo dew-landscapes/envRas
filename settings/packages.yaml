@@ -1,6 +1,9 @@
 watercourse:
     - "magrittr"
 
+coast:
+    - "magrittr"
+
 packages:
     - "base"
     
@@ -36,7 +39,7 @@ packages:
     - "rstac"
     - "gdalcubes"
     - "SLGACloud"
-    - "bioclima"
+    - "predicts"
 
 # maps
     - "sf"

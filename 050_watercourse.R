@@ -12,6 +12,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 tar_source(c("R/make_dist_tile.R"
              , "R/terra_reproject.R"
              , "R/make_dist_raster.R"
+             , "R/make_cube_dir.R"
              )
            )
 
@@ -57,40 +58,25 @@ targets <- list(
                   )
   ## cube directory ------
   , tar_target(cube_directory
-               , fs::path("/mnt"
-                          , "envshare" # Hack while no write access to SAMBA. This should be "envcube"
-                          , envRaster::name_env_tif(x = c(settings$extent
-                                               , settings$grain
-                                               , source = settings_wc$source
-                                               , collection = settings_wc$collection
-                                               )
-                                         , context_defn = c("vector", "filt_col", "filt_level", "buffer")
-                                         , cube_defn = c("temp", "res")
-                                         , dir_only = TRUE
-                                         , prefixes = c("sat", "use")
-                                         , fill_null = TRUE
-                                         )$out_dir
-                          )
-               )
-  ## wc mask --------
-  , tar_target(wc_mask_file
-               , fs::path(settings$data_dir, "vector", "water_poly.parquet")
+               , make_cube_dir(set_scale = settings
+                               , set_source = settings_wc
+                               )
                , format = "file"
                )
-  ## base grid path-------
+  ### base grid path-------
   , tar_target(base_grid_path
                , fs::path(dirname(cube_directory), "base.tif")
-               , format = "file"
-               )
-  ## make cube directory --------
-  , tar_target(make_cube_dir
-               , fs::dir_create(cube_directory)
                , format = "file"
                )
   ## maps -------
   ### wc ------
   , tar_target(wc_file
                , fs::path(settings$data_dir, "vector", "water_lines.parquet")
+               , format = "file"
+               )
+  ### wc mask --------
+  , tar_target(wc_mask_file
+               , fs::path(settings$data_dir, "vector", "water_poly.parquet")
                , format = "file"
                )
   ## prep -------
@@ -101,7 +87,7 @@ targets <- list(
   , tar_target(name = min_date
                , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
                )
-  ### files --------
+  ### out file --------
   , tar_target(wc_tif_file
                  , fs::path(cube_directory
                             , paste0("watercourse__distance__"
@@ -130,9 +116,10 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
     , tar_target(tile_wc
                  , make_dist_tile(base_grid_path = base_grid_path
                                   , extent = tile_extents
-                                  , vect_line_file = wc_file
+                                  , sf_dist_file = wc_file
                                   , terra_options = list(memfrac = use_memfrac)
-                                  , vect_mask_file = wc_mask_file
+                                  , sf_mask_file = wc_mask_file
+                                  , sf_mask_positive = FALSE
                                   , dist_limit = 2000
                                   , out_dir = fs::path(tars$watercourse$store, "tiles")
                                   # via dots... to terra::lapp

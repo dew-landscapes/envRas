@@ -13,6 +13,7 @@ tar_source(c("R/make_dist_rast.R"
              , "R/terra_reproject.R"
              , "R/make_coast_raster.R"
              , "R/save_soil_layer.R"
+             , "R/make_cube_dir.R"
              )
            )
 
@@ -41,28 +42,16 @@ targets <- list(
                   )
   ## cube directory ------
   , tar_target(cube_directory
-               , name_env_tif(x = c(settings$extent
-                                    , list(temp = settings_soil$grain$temp, res = settings$grain$res)
-                                    , source = settings_soil$source
-                                    , collection = settings_soil$collection
-                                    )
-                              , context_defn = c("vector", "filt_col", "filt_level", "buffer")
-                              , cube_defn = c("temp", "res")
-                              , dir_only = TRUE
-                              , prefixes = c("sat", "use")
-                              , fill_null = TRUE
-                              )$out_dir %>%
-                 fs::path("I:", .)
-               )
-  ## make cube directory --------
-  , tar_target(make_cube_dir
-               , fs::dir_create(cube_directory)
+               , make_cube_dir(set_scale = settings
+                               , set_source = settings_soil
+                               )
+               , format = "file"
                )
   ### base grid -------
-  , tar_file_read(base_grid_path
-                  , fs::path(tars$satellite$store, "objects", "cube_directory")
-                  , fs::path(dirname(readRDS(!!.x)), "base.tif")
-                  )
+  , tar_target(base_grid_path
+               , fs::path(dirname(cube_directory), "base.tif")
+               , format = "file"
+               )
   ## download cube -------
   ## prep -------
   ### dates -------

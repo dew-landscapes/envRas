@@ -13,6 +13,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/save_satellite_layer.R"
              , "R/make_indice.R"
+             , "R/make_cube_dir.R"
              )
            )
 
@@ -24,51 +25,31 @@ targets <- list(
   # targets --------
   ## settings -------
   ### setup -------
-  tar_target(name = set_file
-               , command = fs::path("settings/setup.yaml")
-               , format = "file"
-               )
-  , tar_target(name = settings
-               , command = yaml::read_yaml(set_file)
-               )
+  tar_file_read(settings
+                , "settings/setup.yaml"
+                , yaml::read_yaml(!!.x)
+                )
   ### tc ------
-  , tar_target(set_file_tc
-               , fs::path("settings/tc.yaml")
-               , format = "file"
-               )
-  , tar_target(settings_tc
-               , yaml::read_yaml(set_file_tc)
-               )
+  , tar_file_read(settings_tc
+                  , "settings/tc.yaml"
+                  , yaml::read_yaml(!!.x)
+                  )
   ## external objects ------
-  , tar_target(extent_sf_file
-               , fs::path(tars$setup$store, "objects", "extent_sf")
-               , format = "file"
-               )
-  , tar_target(extent_sf
-               , readRDS(extent_sf_file)
-               )
+  , tar_file_read(extent_sf
+                  , fs::path(tars$setup$store, "objects", "extent_sf")
+                  , readRDS(!!.x)
+                  )
   ## cube directory ------
   , tar_target(cube_directory
-               , name_env_tif(x = c(settings$extent
-                                    , settings$grain
-                                    , source = settings_tc$source
-                                    , collection = settings_tc$collection
-                                    )
-                              , context_defn = c("vector", "filt_col", "filt_level", "buffer")
-                              , cube_defn = c("temp", "res")
-                              , dir_only = TRUE
-                              , prefixes = c("sat", "use")
-                              , fill_null = TRUE
-                              )$out_dir %>%
-                 fs::path("I:", .)
-               )
-  ## make cube directory --------
-  , tar_target(make_cube_dir
-               , fs::dir_create(cube_directory)
+               , make_cube_dir(set_scale = settings
+                               , set_source = settings_tc
+                               )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
                , fs::path(dirname(cube_directory), "base.tif")
+               , format = "file"
                )
   ## prep -------
   ### dates -------

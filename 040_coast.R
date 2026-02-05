@@ -3,94 +3,78 @@ library(targets)
 library(tarchetypes)
 library(geotargets)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/make_dist_rast.R"
+tar_source(c("R/make_dist_tile.R"
              , "R/terra_reproject.R"
-             , "R/make_coast_raster.R"
+             , "R/make_dist_raster.R"
+             , "R/make_cube_dir.R"
              )
            )
 
-# cores --------
-use_cores <- floor(parallel::detectCores() * 3 / 4)
+## cores --------
+possible_cores <- parallel::detectCores() * 2 / 3
+max_cores <- 100
+use_cores <- min(possible_cores, max_cores)
 
-# ram -------
+## RAM -------
 total_terra_ram_prop <- 0.6 # across all cores
-terra_memfrac <- total_terra_ram_prop / use_cores # prop of available memory allowed per core (or per tile)
+terra_memfrac <- total_terra_ram_prop / use_cores  # prop of available memory allowed per core (or per SDM)
 
+# controllers  ---------
+this_run_start <- format(Sys.time(), "%Y%m%d_%H%M")
+
+main_controller <- crew_controller_local(workers = use_cores
+                                         , options_local = crew_options_local(log_directory = fs::path(tars$coast$store
+                                                                                                       , "log"
+                                                                                                       , this_run_start
+                                                                                                       , "main_controller"
+                                                                                                       )
+                                                                              )
+                                         , name = "main_controller"
+                                         , tasks_max = 1
+                                         )
 # tar options --------
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               , controller = crew_controller_local(workers = use_cores
-                                                    , crashes_max = 0L
-                                                    , options_local = crew_options_local(log_directory = fs::path(tars$distance_to$store, "log")
-                                                                                         , log_join = TRUE
-                                                                                         )
-                                                    )
+tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$coast))
+               , controller = main_controller
                )
 
 # targets --------
 targets <- list(
   ## settings -------
   ### setup -------
-  tar_target(name = set_file
-               , command = fs::path("settings/setup.yaml")
-               , format = "file"
-               )
-  , tar_target(name = settings
-               , command = yaml::read_yaml(set_file)
-               )
-  ### distance_to -------
-  , tar_target(name = set_file_distance_to
-               , command = fs::path("settings/distance_to.yaml")
-               , format = "file"
-               )
-  , tar_target(name = settings_distance_to
-               , command = yaml::read_yaml(set_file_distance_to)
-               )
+  tar_file_read(settings
+                , "settings/setup.yaml"
+                , yaml::read_yaml(!!.x)
+                )
+  ### coast -------
+  , tar_file_read(settings_coast
+                  , "settings/coast.yaml"
+                  , yaml::read_yaml(!!.x)
+                  )
   ## cube directory ------
   , tar_target(cube_directory
-               , name_env_tif(x = c(settings$extent
-                                    , settings$grain
-                                    , source = settings_distance_to$source
-                                    , collection = settings_distance_to$collection
-                                    )
-                              , context_defn = c("vector", "filt_col", "filt_level", "buffer")
-                              , cube_defn = c("temp", "res")
-                              , dir_only = TRUE
-                              , prefixes = c("sat", "use")
-                              , fill_null = TRUE
-                              )$out_dir %>%
-                 fs::path("I:", .)
-               )
-  ## make cube directory --------
-  , tar_target(make_cube_dir
-               , fs::dir_create(cube_directory)
-               )
-  ## maps -------
-  ### coast ------
-  , tar_target(coast_file
-               , fs::path("..", "..", "..", "data", "vector", "aus.parquet")
+               , make_cube_dir(set_scale = settings
+                               , set_source = settings_coast
+                               )
                , format = "file"
                )
-  , tar_target(coast_sf
-               , arrow::open_dataset(coast_file) |>
-                 sfarrow::read_sf_dataset() |>
-                 sf::st_transform(crs = sf::st_crs(terra::rast(base_grid_path))) |>
-                 sf::st_make_valid()
-               )
-  , tar_target(coast_sf_line
-               , coast_sf |>
-                 sf::st_cast("MULTILINESTRING") |>
-                 sf::st_cast("LINESTRING")
-               )
-  ### base grid -------
+  ### base grid path-------
   , tar_target(base_grid_path
                , fs::path(dirname(cube_directory), "base.tif")
+               , format = "file"
                )
+  ## maps --------
+  ### coast ------
+  , tar_target(coast_file
+               , fs::path(settings$data_dir, "vector", "aus.parquet")
+               , format = "file"
+               )
+  ### coast mask --------
+  # no separate mask needed as the coast is the mask
   ## prep -------
   ### dates -------
   , tar_target(name = max_date
@@ -99,7 +83,7 @@ targets <- list(
   , tar_target(name = min_date
                , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
                )
-  ### files --------
+  ### out file --------
   , tar_target(coast_tif_file
                  , fs::path(cube_directory
                             , paste0("coast__distance__"
@@ -114,42 +98,43 @@ targets <- list(
 if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
   
   distance <- list(
-    ## split -------
+    ## coast--------
+    ### split -------
     tar_target(name = tile_extents
-               , make_tile_extents(base_grid_path = base_grid_path)
+               , envTargets::make_tile_extents(base_grid_path = base_grid_path)
                )
     
     , tar_target(use_memfrac
                  , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
                    {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
                  )
-    ## coast--------
     ### apply -------
-    , tar_terra_rast(tile_coast
-                     , make_dist_rast(base_grid_path
-                                      , tile_extents
-                                      , sf_line = coast_sf_line
-                                      , terra_options = list(memfrac = use_memfrac)
-                                      , datatype = "INT4S" # integer metre accuracy
-                                      )
-                     , pattern = map(tile_extents)
-                     , cue = tar_cue(mode = "never")
-                     )
+    , tar_target(tile_coast
+                 , make_dist_tile(base_grid_path = base_grid_path
+                                  , extent = tile_extents
+                                  , sf_dist_file = coast_file
+                                  , terra_options = list(memfrac = use_memfrac)
+                                  , sf_mask_file = coast_file # = coast_mask_file
+                                  , sf_mask_positive = TRUE
+                                  , dist_limit = 5000
+                                  , out_dir = fs::path(tars$coast$store, "tiles")
+                                  # via dots... to terra::lapp
+                                  , wopt = list(datatype = "INT2S") # easily encompasses -10000 to 10000 m
+                                  )
+                 , pattern = map(tile_extents)
+                 , format = "file"
+                 )
     ### combine -------
     , tar_target(coast
-                 , make_coast_raster(tiles = tile_coast
-                                     , base_grid_path = base_grid_path
-                                     , coast_sf = coast_sf
-                                     , out_file = coast_tif_file
-                                     # passed via ... to terra::lapp()
-                                     , overwrite = TRUE
-                                     , wopt = list(datatype = "INT4S"
-                                                   , gdal = c("TILED=YES"
-                                                            , "COPY_SRC_OVERVIEWS=YES"
-                                                            , "COMPRESS=DEFLATE"
-                                                            )
-                                                   )
-                                     )
+                 , make_dist_raster(tile_coast
+                                    , out_file = coast_tif_file
+                                    , datatype = "INT2S" # easily encompasses -10000 to 10000 m
+                                    , gdal = c("TILED=YES"
+                                               , "COPY_SRC_OVERVIEWS=YES"
+                                               , "COMPRESS=DEFLATE"
+                                               )
+                                    , names = "distance"
+                                    )
                  , format = "file"
                  )
     )
@@ -170,7 +155,7 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
                                    , base_grid_path = base_grid_path
                                    , out_file = coast_tif_file
                                    , method = "bilinear"
-                                   , datatype = "INT4S"
+                                   , datatype = "INT2S"
                                    , overwrite = TRUE
                                    )
                  )

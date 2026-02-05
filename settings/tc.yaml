@@ -7,3 +7,5 @@ collection: "ga_ls_tc_pc_cyear_3"
   
 layers:
   - "wet_pc_10"
+  - "wet_pc_50"
+  - "wet_pc_90"
