@@ -1,0 +1,10 @@
+
+# satellite ------
+source: "DEA"
+
+source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
+  
+collection: "ga_srtm_dem1sv1_0"
+  
+layers:
+  - "dem"
