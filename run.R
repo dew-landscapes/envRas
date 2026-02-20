@@ -43,7 +43,7 @@ if(FALSE) {
   
   # individual tar_make-------
   
-  script <- "setup"
+  script <- "fire"
   
   tar_visnetwork(script = tars_local[[script]]$script
                  , store = tars_local[[script]]$store

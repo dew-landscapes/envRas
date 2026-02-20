@@ -4,9 +4,11 @@ watercourse:
 coast:
     - "magrittr"
 
+fire:
+    - "magrittr"
+  
 packages:
     - "base"
-    
 # targets
     - "targets"
     - "crew"

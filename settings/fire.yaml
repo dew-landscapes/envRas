@@ -1,0 +1,12 @@
+
+# satellite ------
+source: "DEW"
+
+collection: "fire"
+  
+layers:
+  - "recent_fires"
+
+methods:
+  - "count"
+  - "max"

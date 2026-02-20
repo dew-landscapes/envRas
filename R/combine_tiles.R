@@ -1,7 +1,7 @@
-make_dist_raster <- function(tiles
-                             , out_file
-                             , ...
-                             ) {
+combine_tiles <- function(tiles
+                          , out_file
+                          , ...
+                          ) {
   
   terra::vrt(tiles) |>
     terra::sds() |>
