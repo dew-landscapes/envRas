@@ -1,9 +1,7 @@
 
 library(targets)
 library(tarchetypes)
-library(geotargets)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
@@ -49,9 +47,13 @@ list(
   ## settings -------
   ### setup -------
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
+  , tar_file_read(extent_sf
+                  , fs::path(tars$setup$store, "objects", "extent_sf")
+                  , readRDS(!!.x)
+                  )
   ### fire -------
   , tar_file_read(settings_fire
                   , "settings/fire.yaml"
@@ -61,6 +63,7 @@ list(
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
                                , set_source = settings_fire
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )
@@ -71,7 +74,7 @@ list(
                )
   ## fires file ------
   , tar_target(fire_file
-               , fs::path(settings$data_dir, "vector", "fire.parquet")
+               , fs::path(settings$fire_dir, "vector", "fire.parquet")
                , format = "file"
                )
   ## prep -------
@@ -120,7 +123,7 @@ list(
                                              , extent = tile_extents
                                              , polygon_file = fire_file
                                              , polygon_field = "fireyear"
-                                             , polygon_func = "max"
+                                             , polygon_func = method
                                              , tile_background = tile_background
                                              , terra_options = list(memfrac = use_memfrac)
                                              , out_dir = fs::path(tars$fire$store, paste0("tiles_", method))
@@ -134,6 +137,8 @@ list(
       , tar_target(combine
                    , combine_tiles(tiles
                                    , out_file = tif_file
+                                   , sf_mask = extent_sf
+                                   # via dots
                                    , datatype = "INT2S" # covers a bit more than -27000 to 27000
                                    , gdal = c("TILED=YES"
                                               , "COPY_SRC_OVERVIEWS=YES"

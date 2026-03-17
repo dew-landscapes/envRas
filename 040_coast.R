@@ -1,7 +1,6 @@
 
 library(targets)
 library(tarchetypes)
-library(geotargets)
 library(crew)
 
 # tars -------
@@ -10,7 +9,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_dist_tile.R"
              , "R/terra_reproject.R"
-             , "R/make_dist_raster.R"
+             , "R/combine_tiles.R"
              , "R/make_cube_dir.R"
              )
            )
@@ -45,12 +44,16 @@ tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$
 # targets --------
 targets <- list(
   ## settings -------
-  ### setup -------
+  ### settings -------
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
-  ### coast -------
+  , tar_file_read(extent_sf
+                  , fs::path(tars$setup$store, "objects", "extent_sf")
+                  , readRDS(!!.x)
+                  )
+  ### coast ------
   , tar_file_read(settings_coast
                   , "settings/coast.yaml"
                   , yaml::read_yaml(!!.x)
@@ -59,6 +62,7 @@ targets <- list(
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
                                , set_source = settings_coast
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )
@@ -92,15 +96,9 @@ targets <- list(
                                      )
                             )
                  )
-)
-
-# 90 m targets ----------
-if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
-  
-  distance <- list(
-    ## coast--------
-    ### split -------
-    tar_target(name = tile_extents
+  ## coast--------
+  ### split -------
+  , tar_target(name = tile_extents
                , envTargets::make_tile_extents(base_grid_path = base_grid_path)
                )
     
@@ -108,59 +106,35 @@ if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
                  , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
                    {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
                  )
-    ### apply -------
-    , tar_target(tile_coast
-                 , make_dist_tile(base_grid_path = base_grid_path
-                                  , extent = tile_extents
-                                  , sf_dist_file = coast_file
-                                  , terra_options = list(memfrac = use_memfrac)
-                                  , sf_mask_file = coast_file # = coast_mask_file
-                                  , sf_mask_positive = TRUE
-                                  , dist_limit = 5000
-                                  , out_dir = fs::path(tars$coast$store, "tiles")
-                                  # via dots... to terra::lapp
-                                  , wopt = list(datatype = "INT2S") # easily encompasses -10000 to 10000 m
-                                  )
-                 , pattern = map(tile_extents)
-                 , format = "file"
-                 )
-    ### combine -------
-    , tar_target(coast
-                 , make_dist_raster(tile_coast
-                                    , out_file = coast_tif_file
-                                    , datatype = "INT2S" # easily encompasses -10000 to 10000 m
-                                    , gdal = c("TILED=YES"
-                                               , "COPY_SRC_OVERVIEWS=YES"
-                                               , "COMPRESS=DEFLATE"
-                                               )
-                                    , names = "distance"
-                                    )
-                 , format = "file"
-                 )
-    )
-  
-}
-
-
-# not 90 m targets ---------
-if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
-  
-  distance <- list(
-    ## coast -------
-    tar_target(coast
-                 , terra_reproject(in_file = gsub("__\\d{2}\\/"
-                                                  , "__90/"
-                                                  , x = fs::path(coast_tif_file)
-                                                  )
-                                   , base_grid_path = base_grid_path
-                                   , out_file = coast_tif_file
-                                   , method = "bilinear"
-                                   , datatype = "INT2S"
-                                   , overwrite = TRUE
-                                   )
-                 )
+  ### apply -------
+  , tar_target(tile_coast
+               , make_dist_tile(base_grid_path = base_grid_path
+                                , extent = tile_extents
+                                , sf_dist_file = coast_file
+                                , terra_options = list(memfrac = use_memfrac)
+                                , sf_mask_file = coast_file # = coast_mask_file
+                                , sf_mask_positive = TRUE
+                                , dist_limit = 5000
+                                , out_dir = fs::path(tars$coast$store, "tiles")
+                                # via dots... to terra::lapp
+                                , wopt = list(datatype = "INT2S") # easily encompasses -10000 to 10000 m
+                                )
+               , pattern = map(tile_extents)
+               , format = "file"
+               )
+  ### combine -------
+  , tar_target(coast
+               , combine_tiles(tile_coast
+                               , out_file = coast_tif_file
+                               , sf_mask = extent_sf
+                               # via dots to terra::writeRaster
+                               , datatype = "INT2S" # easily encompasses -10000 to 10000 m
+                               , gdal = c("TILED=YES"
+                                          , "COPY_SRC_OVERVIEWS=YES"
+                                          , "COMPRESS=DEFLATE"
+                                          )
+                               , names = "distance"
+                               )
+               , format = "file"
+               )
   )
-  
-}
-
-list(targets, distance)

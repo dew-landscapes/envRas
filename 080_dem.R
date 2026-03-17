@@ -1,11 +1,9 @@
 
-# Tasseled cap
+# dem
 
 library(targets)
-library(geotargets)
 library(tarchetypes)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
@@ -15,6 +13,7 @@ tar_source(c("R/save_satellite_layer.R"
              , "R/make_indice.R"
              , "R/make_cube_dir.R"
              , "R/make_layer_df.R"
+             , "R/aggregate_ras.R"
              )
            )
 
@@ -27,9 +26,13 @@ targets <- list(
   ## settings -------
   ### setup -------
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
+  , tar_target(scales_file
+               , "settings/scales.yaml"
+               , format = "file"
+               )
   ### dem ------
   , tar_file_read(settings_dem
                   , "settings/dem.yaml"
@@ -44,6 +47,7 @@ targets <- list(
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
                                , set_source = settings_dem
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )
@@ -108,6 +112,31 @@ targets <- list(
                                                 )
                , pattern = map(layer_df)
                , format = "file"
-               , cue = tar_cue(depend = FALSE)
                )
-  )
+  ## mung to coarse grid ----------
+  ## aggregate -------
+  , tar_target(aggregate_grid_path
+               , tar_read(base_grid_path, store = tars$climate$store)
+               , format = "file"
+               )
+  , tar_target(name = agg_mean
+               , command = aggregate_ras(input_ras_path = layer
+                                         , base_grid_path = aggregate_grid_path
+                                         , in_res = settings$grain$res
+                                         , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
+                                         , force_new = TRUE
+                                         , agg_func = "mean"
+                                         )
+               , format = "file"
+               )
+  , tar_target(name = agg_sd
+               , command = aggregate_ras(input_ras_path = layer
+                                         , base_grid_path = aggregate_grid_path
+                                         , in_res = settings$grain$res
+                                         , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
+                                         , force_new = TRUE
+                                         , agg_func = "sd"
+                                         )
+               , format = "file"
+               )
+)

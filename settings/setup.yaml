@@ -1,15 +1,7 @@
-data_dir: "/mnt/envshare/data"
+data_dir: "/projects/data"
+cube_dir: "/mnt/envshare/cube"
+fire_dir: "/mnt/envshare/data" # fire.parquet not on bimod. Can remove this when bimod version of fire.parquet is available
 # crs
 crs:
   proj: 8059 # for projected
   decdeg: 4326 # for decimal degrees
-  
-# directories
-extent:
-  vector: "sa_br_dissolve"
-  filt_col: NULL
-  filt_level: NULL
-  buffer: 0
-grain:
-  temp: "P10Y"
-  res: 90

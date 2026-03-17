@@ -2,10 +2,8 @@
 # Tasseled cap
 
 library(targets)
-library(geotargets)
 library(tarchetypes)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
@@ -26,8 +24,8 @@ targets <- list(
   ## settings -------
   ### setup -------
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
   ### tc ------
   , tar_file_read(settings_tc
@@ -43,6 +41,7 @@ targets <- list(
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
                                , set_source = settings_tc
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )

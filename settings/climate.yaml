@@ -1,9 +1,4 @@
 
-# directories
-grain:
-  temp: "P10Y"
-  res: 1000
-
 source: "NCI"
 
 source_url: "https://thredds.nci.org.au/thredds/dodsC/gh70/ANUClimate/v2-0/stable/month"

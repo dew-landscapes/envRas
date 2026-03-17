@@ -1,17 +1,13 @@
 
 library(targets)
 library(tarchetypes)
-library(geotargets)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/make_dist_rast.R"
-             , "R/terra_reproject.R"
-             , "R/make_coast_raster.R"
+tar_source(c("R/terra_reproject.R"
              , "R/save_soil_layer.R"
              , "R/make_cube_dir.R"
              )
@@ -32,8 +28,8 @@ targets <- list(
   ## settings -------
   ### setup -------
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
   ### soil -------
   , tar_file_read(settings_soil
@@ -44,6 +40,7 @@ targets <- list(
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
                                , set_source = settings_soil
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )
@@ -75,10 +72,10 @@ targets <- list(
                )
   ### soil crs --------
   , tar_target(soil_crs
-               , SLGACloud::cogLoad(layer_df$data[[1]]$COGsPath[[1]]
-                                    , api_key = Sys.getenv("TERN_API_KEY")
-                                    ) |>
-                 terra::crs()
+               , terra::rast(layer_df$data[[1]]$StagingPath[[1]], vsi = TRUE) |>
+                 terra::crs(describe = TRUE) |>
+                 dplyr::pull(code) |>
+                 as.numeric()
                )
   ## get soil data ------
   , tar_target(layer

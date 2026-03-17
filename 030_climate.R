@@ -2,7 +2,6 @@
 library(targets)
 library(tarchetypes)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
@@ -10,7 +9,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/download_nc.R"
              , "R/make_bioclim_rasters.R"
-             , "R/align_ras.R"
+             , "R/disagg_ras.R"
              , "R/make_cube_dir.R"
              )
            )
@@ -30,10 +29,19 @@ targets <- list(
   # targets --------
   ## settings -------
   ### setup -------
+  
+  # GRAIN!!
+  # access COARSE grain via envFunc::extract_scale("coarse", scales = scales_file)$grain$res
+  # access FINE grain via settings$grain$res
+  
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
+  , tar_target(scales_file
+               , "settings/scales.yaml"
+               , format = "file"
+               )
   ### climate ------
   , tar_file_read(settings_climate
                   , "settings/climate.yaml"
@@ -46,8 +54,9 @@ targets <- list(
                   )
   ## cube directory ------
   , tar_target(cube_directory
-               , make_cube_dir(set_scale = settings
+               , make_cube_dir(set_scale = envFunc::extract_scale("coarse", scales = scales_file)
                                , set_source = settings_climate
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )
@@ -55,7 +64,7 @@ targets <- list(
   # Not sure this is necessary (could use extent_sf in bbox instead) but will invalidate the downloads if it is removed
   , tar_target(base_grid_path
                , make_base_grid(extent_sf
-                                , out_res = settings_climate$grain$res
+                                , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
                                 , out_epsg = settings$crs$proj
                                 , use_mask = extent_sf
                                 , out_file = fs::path(dirname(cube_directory), "base.tif")
@@ -138,8 +147,6 @@ targets <- list(
                                       )
               , pattern = map(download_files_df)
               , format = "file"
-              , deployment = "main"
-              , cue = tar_cue(depend = FALSE)
               # This partially ran in parallel (maybe 2-3 out of 6 layers returned before error)
               # but would usually fail in parallel with: error in `RNetCDF::open.nc()`: ! NetCDF: Write to read only
               )
@@ -156,23 +163,23 @@ targets <- list(
                                                 )
                , format = "file"
                )
-  ## align -------
-  , tar_target(align_df
+  ## disaggregate  -------
+  , tar_target(disagg_df
                , tibble::tibble(path = bioclim)
                )
-  , tar_target(align_grid_path
+  , tar_target(disagg_grid_path
                , tar_read(base_grid_path
                           , store = tars$satellite$store
                           )
                )
-  , tar_target(name = aligned
-               , command = align_ras(input_ras_path = align_df$path
-                                     , base_grid_path = align_grid_path
-                                     , in_res = settings_climate$grain$res
-                                     , out_res = settings$grain$res
-                                     , force_new = TRUE
-                                     )
+  , tar_target(name = disaggregated
+               , command = disagg_ras(input_ras_path = disagg_df$path
+                                      , base_grid_path = disagg_grid_path
+                                      , in_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
+                                      , out_res = settings$grain$res
+                                      , force_new = TRUE
+                                      )
                , format = "file"
-               , pattern = map(align_df)
+               , pattern = map(disagg_df)
                )
   )

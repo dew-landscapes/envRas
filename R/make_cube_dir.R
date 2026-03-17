@@ -1,6 +1,9 @@
-make_cube_dir <- function(set_scale, set_source) {
+make_cube_dir <- function(set_scale
+                          , set_source
+                          , cube_dir
+                          ) {
   
-  fs::path(envFunc::get_env_dir(linux_default = "/mnt/envcube", windows_default = "I:/")
+  fs::path(cube_dir
            , envRaster::name_env_tif(x = c(set_scale$extent
                                            , set_scale$grain
                                            , source = set_source$source

@@ -1,9 +1,7 @@
 
 library(targets)
-library(geotargets)
 library(tarchetypes)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 # tars <- yaml::read_yaml("_targets.yaml")
@@ -19,22 +17,35 @@ tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$
                )
 
 # source -------
-tar_source(c("R/save_geoparquet.R"))
+tar_source(c("R/save_geoparquet.R"
+             , "R/dir_create_tar.R"
+             )
+           )
 
 list(
   # targets --------
   ## settings-------
   ### setup -------
-  tar_file_read(settings
-                , "settings/setup.yaml"
+  tar_file_read(settings_raw
+                , fs::path("settings/setup.yaml")
                 , yaml::read_yaml(!!.x)
                 )
+  , tar_target(scales_file
+               , fs::path("settings/scales.yaml")
+               , format = "file"
+               )
+  , tar_target(settings
+               , c(settings_raw
+                   , envFunc::extract_scale(scales = scales_file)
+                   )
+               )
   ## extent directory -------
   , tar_target(extent_dir
-               , envFunc::name_env_out(set_list = list(extent = settings$extent)
-                                       , base_dir = envFunc::get_env_dir(linux_default = "/mnt/envcube", windows_default = "I:")
-                                       )$path |>
-                 fs::dir_create()
+               , dir_create_tar(envFunc::name_env_out(set_list = list(extent = settings$extent)
+                                                      , base_dir = envFunc::get_env_dir(linux_default = settings$cube_dir)
+                                                      )$path
+                                )
+               , format = "file"
                )
   ## maps -------
   ### extent sf -------

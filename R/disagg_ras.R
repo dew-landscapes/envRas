@@ -1,14 +1,14 @@
   
-align_ras <- function(input_ras_path
-                      , base_grid_path
-                      , in_res
-                      , out_res
-                      , force_new = TRUE
-                      , proj_method = "bilinear"
-                      ) {
+disagg_ras <- function(input_ras_path
+                       , base_grid_path
+                       , in_res
+                       , out_res
+                       , force_new = TRUE
+                       , proj_method = "bilinear"
+                       ) {
   
-  out_file <- gsub(paste0("__", in_res)
-                   , paste0("__", out_res)
+  out_file <- gsub(paste0("__", in_res, "\\/")
+                   , paste0("__", out_res, "/")
                    , input_ras_path
                    )
   

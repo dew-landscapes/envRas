@@ -60,6 +60,9 @@ save_satellite_layer <- function(items
                                 , ...
                                 )
     
+    # sometimes the created file can have a different name to that 'predicted' when out_file is created above
+    if(file.exists(res)) out_file <- res
+    
   }
   
   return(out_file)

@@ -1,9 +1,7 @@
 
 library(targets)
 library(tarchetypes)
-library(geotargets)
 library(crew)
-library(crew.cluster)
 
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
@@ -11,7 +9,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_dist_tile.R"
              , "R/terra_reproject.R"
-             , "R/make_dist_raster.R"
+             , "R/combine_tiles.R"
              , "R/make_cube_dir.R"
              )
            )
@@ -46,12 +44,16 @@ tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$
 # targets --------
 targets <- list(
   ## settings -------
-  ### setup -------
+  ### settings -------
   tar_file_read(settings
-                , "settings/setup.yaml"
-                , yaml::read_yaml(!!.x)
+                , fs::path(tars$setup$store, "objects", "settings")
+                , readRDS(!!.x)
                 )
-  ### watercourse -------
+  , tar_file_read(extent_sf
+                  , fs::path(tars$setup$store, "objects", "extent_sf")
+                  , readRDS(!!.x)
+                  )
+  ### wc ------
   , tar_file_read(settings_wc
                   , "settings/watercourse.yaml"
                   , yaml::read_yaml(!!.x)
@@ -60,6 +62,7 @@ targets <- list(
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
                                , set_source = settings_wc
+                               , cube_dir = settings$cube_dir
                                )
                , format = "file"
                )
@@ -96,75 +99,45 @@ targets <- list(
                                      )
                             )
                  )
-)
-
-# 90 m targets ----------
-if(yaml::read_yaml("settings/setup.yaml")$grain$res == 90) {
+  ## wc--------
+  ### split -------
+  , tar_target(name = tile_extents
+             , envTargets::make_tile_extents(base_grid_path = base_grid_path)
+             )
   
-  distance <- list(
-    ## wc--------
-    ### split -------
-    tar_target(name = tile_extents
-               , envTargets::make_tile_extents(base_grid_path = base_grid_path)
+  , tar_target(use_memfrac
+               , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
+                 {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
                )
-    
-    , tar_target(use_memfrac
-                 , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
-                   {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
-                 )
-    ### apply -------
-    , tar_target(tile_wc
-                 , make_dist_tile(base_grid_path = base_grid_path
-                                  , extent = tile_extents
-                                  , sf_dist_file = wc_file
-                                  , terra_options = list(memfrac = use_memfrac)
-                                  , sf_mask_file = wc_mask_file
-                                  , sf_mask_positive = FALSE
-                                  , dist_limit = 2000
-                                  , out_dir = fs::path(tars$watercourse$store, "tiles")
-                                  # via dots... to terra::lapp
-                                  , wopt = list(datatype = "INT2S") # covers a bit more than -27000 to 27000
-                                  )
-                 , pattern = map(tile_extents)
-                 , format = "file"
-                 )
-    ### combine -------
-    , tar_target(wc
-                 , make_dist_raster(tile_wc
-                                    , out_file = wc_tif_file
-                                    , datatype = "INT2S" # easily encompasses -1000 to 1000 m
-                                    , gdal = c("TILED=YES"
-                                               , "COPY_SRC_OVERVIEWS=YES"
-                                               , "COMPRESS=DEFLATE"
-                                               )
-                                    , names = "distance"
-                                    )
-                 , format = "file"
-                 )
-    )
-  
-}
-
-
-# not 90 m targets ---------
-if(yaml::read_yaml("settings/setup.yaml")$grain$res < 90) {
-  
-  distance <- list(
-    ## wc -------
-    tar_target(wc
-                 , terra_reproject(in_file = gsub("__\\d{2}\\/"
-                                                  , "__90/"
-                                                  , x = fs::path(wc_tif_file)
-                                                  )
-                                   , base_grid_path = base_grid_path
-                                   , out_file = wc_tif_file
-                                   , method = "bilinear"
-                                   , datatype = "INT2S"
-                                   , overwrite = TRUE
-                                   )
-                 )
-  )
-  
-}
-
-list(targets, distance)
+  ### apply -------
+  , tar_target(tile_wc
+               , make_dist_tile(base_grid_path = base_grid_path
+                                , extent = tile_extents
+                                , sf_dist_file = wc_file
+                                , terra_options = list(memfrac = use_memfrac)
+                                , sf_mask_file = wc_mask_file
+                                , sf_mask_positive = FALSE
+                                , dist_limit = 2000
+                                , out_dir = fs::path(tars$watercourse$store, "tiles")
+                                # via dots... to terra::lapp
+                                , wopt = list(datatype = "INT2S") # covers a bit more than -27000 to 27000
+                                )
+               , pattern = map(tile_extents)
+               , format = "file"
+               )
+  ### combine -------
+  , tar_target(wc
+               , combine_tiles(tile_wc
+                               , out_file = wc_tif_file
+                               , sf_mask = extent_sf
+                               # via dots to terra::writeRaster
+                               , datatype = "INT2S" # easily encompasses -1000 to 1000 m
+                               , gdal = c("TILED=YES"
+                                          , "COPY_SRC_OVERVIEWS=YES"
+                                          , "COMPRESS=DEFLATE"
+                                          )
+                               , names = "distance"
+                               )
+               , format = "file"
+               )
+)

@@ -14,25 +14,36 @@ download_nc <- function(save_file
       sf::st_transform(crs = files_epsg) |>
       sf::st_bbox()
     
-    r <- purrr::map(remote_files
+    # proxy object
+    p <- purrr::map(remote_files
                     , safe_ncdf
                     , proxy = TRUE
                     ) |>
       purrr::map("result") |>
       purrr::compact()
     
-    if(length(r)) {
-    
-      r |>
+    if(length(p)) {
+      
+      time_stamps <- purrr::map(p
+                                , \(x) stars::st_get_dimension_values(x, which = "time") |>
+                                  lubridate::as_date()
+                                ) |>
+        unlist() |>
+        as.Date()
+      
+      p |>
         purrr::map(sf::st_set_crs, files_epsg) |>
         purrr::map(`[`
                    , i = sf::st_bbox(use_bbox)
                    ) |>
         purrr::map(stars::st_as_stars
                    , proxy = FALSE
-                   ) %>%
-        do.call("c", .) |>
-        stars::st_redimension() |>
+                   ) |>
+        append(list(along = "time")) |>
+        do.call(what = c, args = _) |>
+        stars::st_set_dimensions(which = "time"
+                                 , values = time_stamps
+                                 ) |>
         terra::rast() |>
         terra::app(fun = get(func)
                    , filename = save_file
