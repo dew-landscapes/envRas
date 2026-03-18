@@ -143,7 +143,8 @@ targets <- list(
                                       , remote_files = download_files_df$remote_files[[1]]$remote_file
                                       , bbox = bbox
                                       , func = download_files_df$func
-                                      , force_new = FALSE
+                                      , force_new = TRUE
+                                      , base_grid_path = base_grid_path
                                       )
               , pattern = map(download_files_df)
               , format = "file"

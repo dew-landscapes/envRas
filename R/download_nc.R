@@ -4,6 +4,7 @@ download_nc <- function(save_file
                         , files_epsg = 4283
                         , func = "mean"
                         , force_new = FALSE
+                        , base_grid_path = NULL
                         ) {
   
   if(any(!file.exists(save_file), force_new)) {
@@ -31,7 +32,7 @@ download_nc <- function(save_file
         unlist() |>
         as.Date()
       
-      p |>
+      r <- p |>
         purrr::map(sf::st_set_crs, files_epsg) |>
         purrr::map(`[`
                    , i = sf::st_bbox(use_bbox)
@@ -45,11 +46,14 @@ download_nc <- function(save_file
                                  , values = time_stamps
                                  ) |>
         terra::rast() |>
-        terra::app(fun = get(func)
-                   , filename = save_file
-                   , overwrite = TRUE
-                   , wopt = list(names = gsub("__.*", "", basename(save_file)))
-                   )
+        terra::app(fun = get(func))
+      
+      terra::project(r
+                     , y = terra::rast(base_grid_path)
+                     , filename = save_file
+                     , overwrite = TRUE
+                     , names = gsub("__.*", "", basename(save_file))
+                     )
       
       }
                         
