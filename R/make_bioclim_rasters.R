@@ -16,9 +16,7 @@ make_bioclim_rasters <- function(files_df
                
                out_file <- fs::path(out_dir
                                     , paste0(use_x
-                                             , "__"
-                                             , use_x
-                                             , "__"
+                                             , "__bioclim__"
                                              , start_date
                                              , ".tif"
                                              )
@@ -26,7 +24,7 @@ make_bioclim_rasters <- function(files_df
                
                if(any(!file.exists(out_file), force_new)) {
                
-                 terra::writeRaster(bc[x]
+                 terra::writeRaster(bc[[x]]
                                     , filename = out_file
                                     , overwrite = TRUE
                                     )
