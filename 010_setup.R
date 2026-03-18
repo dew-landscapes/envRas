@@ -18,7 +18,7 @@ tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$
 
 # source -------
 tar_source(c("R/save_geoparquet.R"
-             , "R/dir_create_tar.R"
+             , "R/path_create_tar.R"
              )
            )
 
@@ -41,10 +41,10 @@ list(
                )
   ## extent directory -------
   , tar_target(extent_dir
-               , dir_create_tar(envFunc::name_env_out(set_list = list(extent = settings$extent)
-                                                      , base_dir = envFunc::get_env_dir(linux_default = settings$cube_dir)
-                                                      )$path
-                                )
+               , path_create_tar(envFunc::name_env_out(set_list = list(extent = settings$extent)
+                                                       , base_dir = envFunc::get_env_dir(linux_default = settings$cube_dir)
+                                                       )$path
+                                 )
                , format = "file"
                )
   ## maps -------
