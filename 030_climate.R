@@ -157,7 +157,7 @@ targets <- list(
                  tidyr::nest(files = c(start_date, name, path))
                )
   , tar_target(name = bioclim
-               , command = make_bioclim_rasters(bioclim_files_df
+               , command = make_bioclim_rasters(files_df = bioclim_files_df
                                                 , out_dir = cube_directory
                                                 , start_date = min_date
                                                 )
