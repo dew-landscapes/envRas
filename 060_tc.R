@@ -94,7 +94,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 # gdalcubes::write_tif args
                                                 # none
                                                 )

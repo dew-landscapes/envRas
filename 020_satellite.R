@@ -99,7 +99,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
                                                               , scale = 1
@@ -126,7 +126,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 # no pack
                                                 )
                , pattern = map(variability_df)
@@ -143,7 +143,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 # no pack
                                                 )
                , pattern = map(variability_df)
@@ -166,7 +166,7 @@ targets <- list(
                                        , layers = combined_layers
                                        , base_dir = cube_directory
                                        , settings = settings_satellite
-                                       , force_new = TRUE
+                                       , force_new = FALSE
                                        )
                , pattern = map(indice_list)
                , format = "file"

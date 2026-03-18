@@ -106,7 +106,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 # gdalcubes::write_tif args
                                                 # none
                                                 )
@@ -124,7 +124,7 @@ targets <- list(
                                          , base_grid_path = aggregate_grid_path
                                          , in_res = settings$grain$res
                                          , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
-                                         , force_new = TRUE
+                                         , force_new = FALSE
                                          , agg_func = "mean"
                                          )
                , format = "file"
@@ -134,7 +134,7 @@ targets <- list(
                                          , base_grid_path = aggregate_grid_path
                                          , in_res = settings$grain$res
                                          , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
-                                         , force_new = TRUE
+                                         , force_new = FALSE
                                          , agg_func = "sd"
                                          )
                , format = "file"
