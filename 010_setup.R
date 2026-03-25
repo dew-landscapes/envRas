@@ -50,11 +50,11 @@ list(
   ## maps -------
   ### extent sf -------
   , tar_target(name = extent_sf_file
-               , command = fs::path(settings$data_dir, "vector", paste0(settings$extent$vector, ".parquet"))
+               , command = "data/Dam Detection_2026.shp"
                , format = "file"
                )
   , tar_target(name = extent_sf
-               , command = sfarrow::st_read_parquet(extent_sf_file) |>
+               , command = sf::st_read(extent_sf_file) |>
                  make_aoi(filt_col = settings$extent$filt_col
                           , filt_level = settings$extent$filt_level
                           , buffer = settings$extent$buffer

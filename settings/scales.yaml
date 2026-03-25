@@ -1,14 +1,10 @@
 # directories
 envRas:
   extent:
-    vector: "sa_br_dissolve"
+    vector: "todd"
     filt_col: NULL
     filt_level: NULL
-    buffer: 0
+    buffer: 5000
   grain:
-    temp: "P10Y"
-    res: 90
-
-coarse:
-  grain:
-    res: 1000
+    temp: "P1M"
+    res: 10

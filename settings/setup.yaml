@@ -1,5 +1,5 @@
 data_dir: "/projects/data"
-cube_dir: "/mnt/envshare/cube"
+cube_dir: "/mnt/envcube"
 fire_dir: "/mnt/envshare/data" # fire.parquet not on bimod. Can remove this when bimod version of fire.parquet is available
 # crs
 crs:

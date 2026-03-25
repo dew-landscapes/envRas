@@ -9,7 +9,7 @@ save_satellite_layer <- function(items
                             , cloud_mask = NULL
                             , base_dir
                             , period
-                            , cores = parallel::detectCores() * 3 / 4
+                            , cores = envFunc::use_cores()
                             , force_new = TRUE
                             , ...
                             ) {
@@ -25,6 +25,8 @@ save_satellite_layer <- function(items
     layer_to_get <- items |>
       rstac::items_assets() |>
       grep(paste0(layer, "$"), x = _, value = TRUE)
+    
+    if(!is.null(cloud_mask)) layer_to_get <- c(layer_to_get, "oa_fmask")
     
     coll <- gdalcubes::stac_image_collection(items$features
                                              , asset_names = layer_to_get
@@ -48,7 +50,7 @@ save_satellite_layer <- function(items
                                 , view
                                 , mask = if(!is.null(cloud_mask)) cloud_mask else NULL
                                 ) |>
-      gdalcubes::select_bands(layer_to_get)
+      gdalcubes::select_bands(layer_to_get[[1]])
     
     res <- gdalcubes::write_tif(r
                                 , dir = base_dir
@@ -60,12 +62,11 @@ save_satellite_layer <- function(items
                                 , ...
                                 )
     
-    # sometimes the created file can have a different name to that 'predicted' when out_file is created above
-    if(file.exists(res)) out_file <- res
+    out_file <- res
     
   }
   
-  return(out_file)
+  return(out_file) # can be more than one file
   
 }
 

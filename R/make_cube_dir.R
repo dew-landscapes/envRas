@@ -7,7 +7,7 @@ make_cube_dir <- function(set_scale
            , envRaster::name_env_tif(x = c(set_scale$extent
                                            , set_scale$grain
                                            , source = set_source$source
-                                           , collection = set_source$collection
+                                           , collection = paste0(set_source$collection, collapse = "__")
                                            )
                                      , context_defn = c("vector", "filt_col", "filt_level", "buffer")
                                      , cube_defn = c("temp", "res")

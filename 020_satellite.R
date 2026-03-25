@@ -41,7 +41,7 @@ targets <- list(
                                , set_source = settings_satellite
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
+               # don't use format = "file" as the directory changes as the layers are written!
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -58,11 +58,11 @@ targets <- list(
                )
   ## prep -------
   ### dates -------
-  , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31") 
-               )
   , tar_target(name = min_date
-               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
+               , lubridate::as_date("2023-09-01")
+               )
+  , tar_target(name = max_date
+               , command = min_date + lubridate::as.period(settings$grain$temp) - lubridate::as.period("P1D")
                )
   #### bbox -------
   , tar_target(bbox
@@ -89,6 +89,9 @@ targets <- list(
   , tar_target(layer_df
                , tibble::tibble(layer = settings_satellite$layers)
                )
+  , tar_target(cloud_mask
+               , gdalcubes::image_mask(band = settings_satellite$cloud_mask$band, values = settings_satellite$cloud_mask$mask)
+               )
   ### download --------
   , tar_target(name = layer
                , command = save_satellite_layer(items = items
@@ -96,7 +99,7 @@ targets <- list(
                                                 , layer = layer_df$layer
                                                 , start_date = min_date
                                                 , end_date = max_date
-                                                , cloud_mask = NULL
+                                                , cloud_mask = cloud_mask
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
                                                 , force_new = FALSE
@@ -110,46 +113,46 @@ targets <- list(
                , pattern = map(layer_df)
                , format = "file"
                )
-  ## variability -----
-  ### variability_df------
-  , tar_target(name = variability_df
-               , tibble::tibble(layer = settings_satellite$variability)
-               )
-  ### download mean --------
-  , tar_target(name = variability
-               , command = save_satellite_layer(items = items
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = variability_df$layer
-                                                , agg_func = "mean"
-                                                , start_date = min_date
-                                                , end_date = max_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = settings$grain$temp
-                                                , force_new = FALSE
-                                                # no pack
-                                                )
-               , pattern = map(variability_df)
-               , format = "file"
-               )
-  ### download max --------
-  , tar_target(name = max
-               , command = save_satellite_layer(items = items
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = variability_df$layer
-                                                , agg_func = "max"
-                                                , start_date = min_date
-                                                , end_date = max_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = settings$grain$temp
-                                                , force_new = FALSE
-                                                # no pack
-                                                )
-               , pattern = map(variability_df)
-               , format = "file"
-               )
-  ## indices------
+  # ## variability -----
+  # ### variability_df------
+  # , tar_target(name = variability_df
+  #              , tibble::tibble(layer = settings_satellite$variability)
+  #              )
+  # ### download mean --------
+  # , tar_target(name = variability
+  #              , command = save_satellite_layer(items = items
+  #                                               , base_grid = terra::rast(base_grid_path)
+  #                                               , layer = variability_df$layer
+  #                                               , agg_func = "mean"
+  #                                               , start_date = min_date
+  #                                               , end_date = max_date
+  #                                               , cloud_mask = NULL
+  #                                               , base_dir = cube_directory
+  #                                               , period = settings$grain$temp
+  #                                               , force_new = FALSE
+  #                                               # no pack
+  #                                               )
+  #              , pattern = map(variability_df)
+  #              , format = "file"
+  #              )
+  # ### download max --------
+  # , tar_target(name = max
+  #              , command = save_satellite_layer(items = items
+  #                                               , base_grid = terra::rast(base_grid_path)
+  #                                               , layer = variability_df$layer
+  #                                               , agg_func = "max"
+  #                                               , start_date = min_date
+  #                                               , end_date = max_date
+  #                                               , cloud_mask = NULL
+  #                                               , base_dir = cube_directory
+  #                                               , period = settings$grain$temp
+  #                                               , force_new = FALSE
+  #                                               # no pack
+  #                                               )
+  #              , pattern = map(variability_df)
+  #              , format = "file"
+  #              )
+  # ## indices------
   ### indices list --------
   , tar_target(indice_list
                , settings_satellite$indices
