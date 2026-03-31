@@ -70,7 +70,8 @@ targets <- list(
                                 , overwrite = TRUE
                                 , ret = "path"
                                 , datatype = "INT1U"
-                                )
+                                ) |>
+                 as.character()
                )
   ## prep -------
   ### dates -------
@@ -141,7 +142,7 @@ targets <- list(
                                       , remote_files = download_files_df$remote_files[[1]]$remote_file
                                       , bbox = bbox
                                       , func = download_files_df$func
-                                      , force_new = TRUE
+                                      , force_new = FALSE
                                       , base_grid_path = base_grid_path
                                       )
               , pattern = map(download_files_df)
@@ -176,7 +177,7 @@ targets <- list(
                                       , base_grid_path = disagg_grid_path
                                       , in_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
                                       , out_res = settings$grain$res
-                                      , force_new = TRUE
+                                      , force_new = FALSE
                                       )
                , format = "file"
                , pattern = map(disagg_df)

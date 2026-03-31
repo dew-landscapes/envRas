@@ -118,6 +118,7 @@ targets <- list(
                                 , sf_mask_positive = FALSE
                                 , dist_limit = 2000
                                 , out_dir = fs::path(tars$watercourse$store, "tiles")
+                                , force_new = FALSE
                                 # via dots... to terra::lapp
                                 , wopt = list(datatype = "INT2S") # covers a bit more than -27000 to 27000
                                 )

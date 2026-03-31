@@ -126,6 +126,7 @@ list(
                                              , tile_background = tile_background
                                              , terra_options = list(memfrac = use_memfrac)
                                              , out_dir = fs::path(tars$fire$store, paste0("tiles_", method))
+                                             , force_new = FALSE
                                              # via dots... to terra::lapp
                                              , wopt = list(datatype = "INT2S") # covers a bit more than -27000 to 27000
                                              )
