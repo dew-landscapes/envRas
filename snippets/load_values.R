@@ -45,3 +45,24 @@ if(FALSE) {
                       )
   
 }
+
+if(FALSE) {
+  
+  items = items
+  base_grid = terra::rast(base_grid_path)
+  layer = layer_df$layer
+  start_date = min_date
+  end_date = max_date
+  cloud_mask = NULL
+  base_dir = cube_directory
+  period = settings$grain$temp
+  force_new = FALSE
+  # gdalcubes::write_tif args
+  pack = list(type = "int16"
+                , scale = 1
+                , offset = 0
+                , nodata = -999
+              )
+  
+  
+}
