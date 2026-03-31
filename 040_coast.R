@@ -64,12 +64,11 @@ targets <- list(
                                , set_source = settings_coast
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
                )
   ### base grid path-------
   , tar_target(base_grid_path
-               , fs::path(dirname(cube_directory), "base.tif")
-               , format = "file"
+               , fs::path(dirname(cube_directory), "base.tif") |>
+                 as.character()
                )
   ## maps --------
   ### coast ------

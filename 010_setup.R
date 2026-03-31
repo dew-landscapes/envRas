@@ -45,7 +45,6 @@ list(
                                                        , base_dir = envFunc::get_env_dir(linux_default = settings$cube_dir)
                                                        )$path
                                  )
-               , format = "file"
                )
   ## maps -------
   ### extent sf -------

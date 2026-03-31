@@ -58,7 +58,6 @@ targets <- list(
                                , set_source = settings_climate
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
                )
   ### base grid -------
   # Not sure this is necessary (could use extent_sf in bbox instead) but will invalidate the downloads if it is removed
@@ -72,7 +71,6 @@ targets <- list(
                                 , ret = "path"
                                 , datatype = "INT1U"
                                 )
-               , format = "file"
                )
   ## prep -------
   ### dates -------

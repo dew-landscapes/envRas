@@ -65,12 +65,11 @@ list(
                                , set_source = settings_fire
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
                )
   ### base grid path-------
   , tar_target(base_grid_path
-               , fs::path(dirname(cube_directory), "base.tif")
-               , format = "file"
+               , fs::path(dirname(cube_directory), "base.tif") |>
+                 as.character()
                )
   ## fires file ------
   , tar_target(fire_file

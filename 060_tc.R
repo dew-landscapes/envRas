@@ -43,12 +43,11 @@ targets <- list(
                                , set_source = settings_tc
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
-               , fs::path(dirname(cube_directory), "base.tif")
-               , format = "file"
+               , fs::path(dirname(cube_directory), "base.tif") |>
+                 as.character()
                )
   ## prep -------
   ### dates -------
