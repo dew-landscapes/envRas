@@ -9,7 +9,7 @@ save_satellite_layer <- function(items
                             , cloud_mask = NULL
                             , base_dir
                             , period
-                            , cores = parallel::detectCores() * 3 / 4
+                            , cores = envFunc::use_cores()
                             , force_new = TRUE
                             , ...
                             ) {
@@ -61,7 +61,7 @@ save_satellite_layer <- function(items
                                 )
     
     # sometimes the created file can have a different name to that 'predicted' when out_file is created above
-    if(file.exists(res)) out_file <- res
+    out_file <- res
     
   }
   
