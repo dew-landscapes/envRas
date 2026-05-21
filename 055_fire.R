@@ -14,9 +14,7 @@ tar_source(c("R/make_cube_dir.R"
            )
 
 ## cores --------
-possible_cores <- parallel::detectCores() * 2 / 3
-max_cores <- 100
-use_cores <- min(possible_cores, max_cores)
+use_cores <- envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
 
 ## RAM -------
 total_terra_ram_prop <- 0.6 # across all cores
@@ -73,7 +71,7 @@ list(
                )
   ## fires file ------
   , tar_target(fire_file
-               , fs::path(settings$fire_dir, "vector", "fire.parquet")
+               , fs::path(settings$data_dir, "vector", "fire.parquet")
                , format = "file"
                )
   ## prep -------

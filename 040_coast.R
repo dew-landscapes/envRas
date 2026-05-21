@@ -15,9 +15,7 @@ tar_source(c("R/make_dist_tile.R"
            )
 
 ## cores --------
-possible_cores <- parallel::detectCores() * 2 / 3
-max_cores <- 100
-use_cores <- min(possible_cores, max_cores)
+use_cores <- envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
 
 ## RAM -------
 total_terra_ram_prop <- 0.6 # across all cores

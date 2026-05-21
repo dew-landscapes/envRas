@@ -94,6 +94,7 @@ targets <- list(
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$temp
                                                 , force_new = FALSE
+                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
                                                 # gdalcubes::write_tif args
                                                 # none
                                                 )

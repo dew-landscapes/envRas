@@ -104,6 +104,7 @@ targets <- list(
                                                               , offset = 0
                                                               , nodata = -999
                                                               )
+                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
                                                 )
                , pattern = map(layer_df)
                , format = "file"
