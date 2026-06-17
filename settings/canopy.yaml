@@ -1,0 +1,8 @@
+
+# satellite ------
+source: "ETH"
+
+collection: "globalcanopyheight"
+  
+layers:
+  - "chm"

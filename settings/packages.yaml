@@ -6,6 +6,9 @@ coast:
 
 fire:
     - "magrittr"
+    
+canopy:
+    - "forestdata"
   
 packages:
     - "base"
