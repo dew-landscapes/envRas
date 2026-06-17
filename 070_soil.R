@@ -7,8 +7,7 @@ library(crew)
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/terra_reproject.R"
-             , "R/save_soil_layer.R"
+tar_source(c("R/save_soil_layer.R"
              , "R/make_cube_dir.R"
              )
            )

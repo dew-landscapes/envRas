@@ -8,7 +8,6 @@ tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
 tar_source(c("R/make_dist_tile.R"
-             , "R/terra_reproject.R"
              , "R/combine_tiles.R"
              , "R/make_cube_dir.R"
              )
