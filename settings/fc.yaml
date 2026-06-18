@@ -2,10 +2,10 @@
 source: "DEA"
 
 source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
-  
+
 collection: "ga_ls_fc_pc_cyear_3"
   
 layers:
-  - "pv_pc_10"
-  - "bs_pc_10"
-  - "npv_pc_90"
+  - "pv_pc_50"
+  - "bs_pc_50"
+  - "npv_pc_50"

@@ -27,9 +27,9 @@ targets <- list(
                 , fs::path(tars$setup$store, "objects", "settings")
                 , readRDS(!!.x)
                 )
-  ### green ------
-  , tar_file_read(settings_green
-                  , "settings/green.yaml"
+  ### fc ------
+  , tar_file_read(settings_fc
+                  , "settings/fc.yaml"
                   , yaml::read_yaml(!!.x)
                   )
   ## external objects ------
@@ -40,7 +40,7 @@ targets <- list(
   ## cube directory ------
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
-                               , set_source = settings_green
+                               , set_source = settings_fc
                                , cube_dir = settings$cube_dir
                                )
                )
@@ -66,8 +66,8 @@ targets <- list(
                )
   ### items ------
   , tar_target(items
-               , rstac::stac(settings_green$source_url) |>
-                 rstac::stac_search(collections = settings_green$collection
+               , rstac::stac(settings_fc$source_url) |>
+                 rstac::stac_search(collections = settings_fc$collection
                                     , bbox = bbox
                                     , datetime = paste0(as.character(min_date)
                                                         , "/"
@@ -80,7 +80,7 @@ targets <- list(
   ## layers --------
   ### layer df --------
   , tar_target(layer_df
-               , tibble::tibble(layer = settings_green$layers)
+               , tibble::tibble(layer = settings_fc$layers)
                )
   ### download --------
   , tar_target(name = layer
