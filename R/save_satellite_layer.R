@@ -15,7 +15,7 @@ save_satellite_layer <- function(items
                             ) {
   
   out_file <- fs::path(base_dir
-                       , paste0(layer, "__", agg_func, "__", start_date, ".tif")
+                       , paste0(gsub("nbart_", "", layer), "__", agg_func, "__", start_date, ".tif")
                        )
   
   if(any(!file.exists(out_file), force_new)) {
@@ -24,7 +24,7 @@ save_satellite_layer <- function(items
     
     layer_to_get <- items |>
       rstac::items_assets() |>
-      grep(paste0(layer, "$"), x = _, value = TRUE)
+      grep(paste0("^", layer, "$"), x = _, value = TRUE)
     
     coll <- gdalcubes::stac_image_collection(items$features
                                              , asset_names = layer_to_get
