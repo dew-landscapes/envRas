@@ -68,18 +68,10 @@ targets <- list(
                                )
                , format = "parquet"
                )
-  ### soil crs --------
-  , tar_target(soil_crs
-               , terra::rast(layer_df$data[[1]]$StagingPath[[1]], vsi = TRUE) |>
-                 terra::crs(describe = TRUE) |>
-                 dplyr::pull(code) |>
-                 as.numeric()
-               )
   ## get soil data ------
   , tar_target(layer
                , save_soil_layer(paths_df = layer_df$data[[1]]
                                  , key = Sys.getenv("TERN_API_KEY")
-                                 , in_crs = soil_crs
                                  , grid_path = base_grid_path
                                  , out_file = layer_df$out_file
                                  , force_new = FALSE

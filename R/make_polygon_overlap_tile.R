@@ -34,6 +34,8 @@ make_polygon_overlap_tile <- function(base_grid_path
               )
       
     }
+    
+    if(!dir.exists(out_dir)) fs::dir_create(out_dir)
       
     r <- terra::rast(base_grid_path)
       

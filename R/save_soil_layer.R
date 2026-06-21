@@ -1,6 +1,5 @@
 save_soil_layer <- function(paths_df
                             , key = Sys.getenv("TERN_API_KEY")
-                            , in_crs
                             , grid_path
                             , out_file
                             , force_new = FALSE
@@ -11,17 +10,17 @@ save_soil_layer <- function(paths_df
   
   if(run) {
     
+    r <- SLGACloud::cogLoad(paths_df$COGsPath
+                            , api_key = key
+                            )
+    
     bbox <- sf::st_bbox(terra::rast(grid_path)) |>
       sf::st_as_sfc() |>
       terra::vect() |>
       terra::densify(50000) |>
       sf::st_as_sf() |>
-      sf::st_transform(crs = in_crs) |>
+      sf::st_transform(crs = terra::crs(r[[1]])) |>
       sf::st_bbox()
-    
-    r <- SLGACloud::cogLoad(paths_df$COGsPath
-                            , api_key = key
-                            )
     
     terra::window(r) <- bbox
     

@@ -3,7 +3,7 @@ make_indice <- function(indice
                         , layers
                         , base_dir
                         , settings
-                        , terra_options = list(memfrac = 0.2)
+                        , terra_options = list(memfrac = 0.1)
                         , force_new = TRUE
                         ) {
   

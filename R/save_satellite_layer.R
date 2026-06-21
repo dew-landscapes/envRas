@@ -52,7 +52,7 @@ save_satellite_layer <- function(items
     
     res <- gdalcubes::write_tif(r
                                 , dir = base_dir
-                                , prefix = paste0(layer
+                                , prefix = paste0(gsub("nbart_", "", layer)
                                                   , "__"
                                                   , agg_func
                                                   , "__"

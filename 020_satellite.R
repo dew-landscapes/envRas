@@ -17,6 +17,8 @@ tar_source(c("R/save_satellite_layer.R"
 # parallel over individual layer rather than across layers, so no need for crew_controller_local etc
 tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages)))
 
+terra::terraOptions(memfrac = 0.1)
+
 targets <- list(
   # targets --------
   ## settings -------

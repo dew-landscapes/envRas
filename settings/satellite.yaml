@@ -12,7 +12,7 @@ layers:
   - "nbart_green"
   - "nbart_swir_1"
   - "nbart_swir_2"
-  # - "coastal_aerosol" # doesn't appear to be in the calendar year collection
+  # - "nbart_coastal_aerosol" # doesn't appear to be in the calendar year collection
   - "nbart_nir"
   
 variability:
