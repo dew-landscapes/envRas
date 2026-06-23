@@ -3,7 +3,7 @@ make_polygon_overlap_tile <- function(base_grid_path
                                       , polygon_file
                                       , polygon_field
                                       , polygon_func = "count"
-                                      , tile_background = 0 # min_fireyear <- (min(polys$fireyear) - 1)
+                                      , tile_background = NA
                                       , tile_buffer = 1000
                                       , terra_options = NULL
                                       , out_dir

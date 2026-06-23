@@ -103,9 +103,6 @@ list(
                               )
                    )
     ## fire--------
-    , tar_target(tile_background
-                 , if(method == "count") 0 else (min(sfarrow::st_read_parquet(fire_file)$fireyear, na.rm = TRUE) - 1)
-                 )
     ### split -------
     , tar_target(name = tile_extents
                  , envTargets::make_tile_extents(base_grid_path = base_grid_path)
@@ -121,10 +118,9 @@ list(
                                              , polygon_file = fire_file
                                              , polygon_field = "fireyear"
                                              , polygon_func = method
-                                             , tile_background = tile_background
                                              , terra_options = list(memfrac = use_memfrac)
                                              , out_dir = fs::path(tars$fire$store, paste0("tiles_", method))
-                                             , force_new = FALSE
+                                             , force_new = TRUE
                                              # via dots... to terra::lapp
                                              , wopt = list(datatype = "INT2S") # covers a bit more than -27000 to 27000
                                              )
