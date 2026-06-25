@@ -25,6 +25,7 @@ if(FALSE) {
                  )
   
   tar_poll(store = tars[[script]]$store)
+  tar_dispatched(store = tars[[script]]$store)
   
   tar_meta(fields = any_of("error"), complete_only = TRUE, store = tars[[script]]$store)
   tar_meta(fields = any_of("warnings"), complete_only = TRUE, store = tars[[script]]$store)
