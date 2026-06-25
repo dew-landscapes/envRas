@@ -9,9 +9,13 @@ fire:
     
 canopy:
     - "forestdata"
+    
+random:
+    - "magrittr"
   
 packages:
     - "base"
+    
 # targets
     - "targets"
     - "crew"
