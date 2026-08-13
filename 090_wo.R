@@ -100,7 +100,7 @@ targets <- list(
                , command = save_satellite_layer(items = items
                                                 , base_grid = terra::rast(base_grid_path)
                                                 , layer = layer_df$layer
-                                                , agg_func = "median"
+                                                , agg_func = "mean"
                                                 , start_date = layer_df$start_date
                                                 , end_date = layer_df$end_date
                                                 , cloud_mask = NULL
