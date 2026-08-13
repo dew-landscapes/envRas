@@ -38,7 +38,8 @@ list(
   , tar_target(env_df
                , envRaster::prepare_env(set_list = list(extent = settings$extent, grain = settings$grain)
                                         , base_dir = settings$cube_dir
-                                        )
+                                        ) |>
+                 dplyr::filter(! grepl("ecosystems", path))
                )
   ## random -------
   #### split ------
@@ -83,7 +84,7 @@ list(
                  dplyr::filter(!is.na(cell_lat), !is.na(cell_long)) |>
                  tidyr::pivot_longer(cols = tidyselect::any_of(env_df$name)) |>
                  envFunc::summarise_long_df() |>
-                 envRaster::env_add_info() |>
+                 envRaster::add_env_info() |>
                  dplyr::mutate(dplyr::across(c(mean, sd, max, min
                                                , tidyselect::matches("^q\\d{2}")
                                                )
