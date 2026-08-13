@@ -14,6 +14,7 @@ tar_source(c("R/save_satellite_layer.R"
              , "R/make_cube_dir.R"
              , "R/make_layer_df.R"
              , "R/aggregate_ras.R"
+             , "R/fill_NA.R"
              )
            )
 
@@ -111,6 +112,28 @@ targets <- list(
                                                 # none
                                                 )
                , pattern = map(layer_df)
+               , format = "file"
+               )
+  ## fill NA values ----------
+  # 'steep' areas get NA values in water observation. who knows why, really.
+  # this fills terrestrial NA values with 0
+  , tar_target(settings_scale
+               , envFunc::extract_scale(scales = scales_file)
+               )
+  , tar_target(env_df
+               , envRaster::prepare_env(set_list = settings_scale
+                                        , base_dir = settings$cube_dir
+                                        )
+               , format = "parquet"
+               )
+  , tar_target(wo
+               , fill_NA(r = layer
+                         , mask = env_df$path[grepl("bio01", env_df$name)]
+                         , fill_val = 0
+                         , out_file = gsub("frequency__", "wo__", layer)
+                         , force_new = FALSE
+                         )
+               , pattern = map(layer)
                , format = "file"
                )
 )
