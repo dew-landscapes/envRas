@@ -7,18 +7,12 @@ library(crew)
 # tars <- yaml::read_yaml("_targets.yaml")
 
 # tar options -------
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               , controller = crew_controller_local(workers = floor(parallel::detectCores() * (3 / 4))
-                                                    , crashes_max = 0L
-                                                    , options_local = crew_options_local(log_directory = fs::path(yaml::read_yaml("_targets.yaml")$setup$store, "log")
-                                                                                         , log_join = TRUE
-                                                                                         )
-                                                    )
-               )
+envTargets::env_tar_option_set("setup")
 
 # source -------
 tar_source(c("R/save_geoparquet.R"
              , "R/path_create_tar.R"
+             , "R/make_cube_dir.R"
              )
            )
 
@@ -39,6 +33,12 @@ list(
                    , envFunc::extract_scale(scales = scales_file)
                    )
                )
+  ### satellite ------
+  # for base grid
+  , tar_file_read(settings_satellite
+                  , "settings/satellite.yaml"
+                  , yaml::read_yaml(!!.x)
+                  )
   ## extent directory -------
   , tar_target(extent_dir
                , path_create_tar(envFunc::name_env_out(set_list = list(extent = settings$extent)
@@ -67,6 +67,25 @@ list(
                                                        )
                                  )
                , format = "file"
+               )
+  ## cube directory ------
+  , tar_target(cube_directory
+               , make_cube_dir(set_scale = settings
+                               , set_source = settings_satellite
+                               , cube_dir = settings$cube_dir
+                               )
+               )
+  ### base grid -------
+  , tar_target(base_grid_path
+               , envRaster::make_base_grid(aoi = extent_sf
+                                           , out_res = settings$grain$res
+                                           , out_epsg = settings$crs$proj
+                                           , use_mask = extent_sf
+                                           , out_file = fs::path(dirname(cube_directory), "base.tif")
+                                           , overwrite = TRUE
+                                           , ret = "path"
+                                           , datatype = "INT1U"
+                                           )
                )
   ## read me --------
   , tar_target(readme_file

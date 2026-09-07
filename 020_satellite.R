@@ -9,7 +9,6 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/save_satellite_layer.R"
              , "R/make_indice.R"
-             , "R/make_cube_dir.R"
              )
            )
 
@@ -40,21 +39,14 @@ targets <- list(
   ## cube directory ------
   , tar_target(cube_directory
                , make_cube_dir(set_scale = settings
-                               , set_source = settings_satellite
+                               , set_source = settings_coast
                                , cube_dir = settings$cube_dir
                                )
                )
-  ### base grid -------
+  ### base grid path-------
   , tar_target(base_grid_path
-               , make_base_grid(aoi = extent_sf
-                                , out_res = settings$grain$res
-                                , out_epsg = settings$crs$proj
-                                , use_mask = extent_sf
-                                , out_file = fs::path(dirname(cube_directory), "base.tif")
-                                , overwrite = TRUE
-                                , ret = "path"
-                                , datatype = "INT1U"
-                                )
+               , fs::path(dirname(cube_directory), "base.tif") |>
+                 as.character()
                )
   ## prep -------
   ### dates -------
