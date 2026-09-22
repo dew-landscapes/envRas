@@ -1,14 +1,31 @@
 # directories
-envRas:
+fine:
   extent:
-    vector: "sa_br_dissolve"
-    filt_col: NULL
-    filt_level: NULL
-    buffer: 0
+    vector: "parks"
+    filt_col: "RESNAME"
+    filt_level: "Bakara"
+    buffer: 10000
+    extent_time: "P50Y" # must be a period of years
   grain:
-    temp: "P10Y"
-    res: 30
+    res_x: 30
+    res_y: 30
+    grain_time: "P1Y" # must be either P1M or P1Y (used to set contexts)
+    run_time: "P10Y"
 
 coarse:
   grain:
-    res: 1000
+    res_x: 1000
+    res_y: 1000
+    
+raw_climate:
+  extent:
+    vector: "aus_imcra_prov_dissolve"
+    filt_col: NULL
+    filt_level: NULL
+    buffer: 0
+    extent_time: "P50Y" # must be a period of years
+  grain:
+    res_x: 1000
+    res_y: 1000
+    grain_time: "P1M" # must be either P1M or P1Y (used to set contexts)
+    run_time: NULL

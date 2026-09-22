@@ -8,7 +8,7 @@ envFunc::check_packages(yaml::read_yaml("settings/packages.yaml")$packages
 
 # tars --------
 ## local ------
-tars_local <- envTargets::make_tars(envFunc::extract_scale("envRas")
+tars_local <- envTargets::make_tars(envFunc::extract_scale("fine")
                                     , list_names = c("extent", "grain")
                                     , save_yaml = FALSE
                                     )
@@ -41,7 +41,7 @@ if(FALSE) {
   
   # individual tar_make-------
   
-  script <- "setup"
+  script <- "satellite"
   
   tar_visnetwork(script = tars_local[[script]]$script
                  , store = tars_local[[script]]$store

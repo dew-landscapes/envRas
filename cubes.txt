@@ -1,4 +1,6 @@
 This directory contains 'cubes' with
+* crs
+    + epsg 8059
 * extent defined by
     + first directory
     + polygon layers available in R:/projects/landscapes/data/vector
@@ -6,21 +8,26 @@ This directory contains 'cubes' with
     + boundary is also defined by aoi.parquet (a simple feature ('sf') spatial object 'parquet' file)
 * grain defined by
     + second directory
-    + using ISO 8601 time periods and resolution in metres 
-    + e.g. P1M__90 is a grain of 1 month * 90 m * 90 m
+    + using ISO 8601 time periods and resolution in metres
+    + usually:
+        + resolution in x-direction
+        + resolution in y-direction
+        + time period for layer
+        + time period for 'run' ('function' (see layer) is applied over the 'run' time period)
+    + e.g. 90__90__P1Y__P10Y holds rasters with spatial grain of 90 m, temporal grain of 1 year and the values are a result of applying a function over a 10 year period
 * source and collection defined by
     + third directory
     + e.g. DEA is Digital Earth Australia and ga_ls7e_ard_3--ga_ls5t_ard_3 includes both of DEAs Landsat 5 and 7 analysis ready data collections
     + see https://explorer.dea.ga.gov.au/products for details on DEA collections
-* bands
-    + as file names
-    + e.g. band_name__start_date.tif
-    + where start_date is the starting date for the grain period
+* layer
+    + file names
+    + e.g. band_name__function__start_date.tif
+        + band_name is the name of the layer within the collection
+        + function is the function applied over the 'run_time' (see grain)
+        + start_date is the start_date for the 'run' (see grain)
     + values contain (usually) median of any cells in the original stack, as defined by the grain, but excluding 
       + images with < 10% cloud
       + pixels identified as cloud or cloud mask
-* crs
-    + epsg 8059
 
 Indices, always generated as (first_band - second_band) / (first_band + second_band), are:
 * ndwi = c("green", "nir")

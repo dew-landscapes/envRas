@@ -122,7 +122,7 @@ list(
                                              , out_dir = fs::path(tars$fire$store, paste0("tiles_", method))
                                              , force_new = TRUE
                                              # via dots... to terra::lapp
-                                             , wopt = list(datatype = "INT2S") # covers a bit more than -27000 to 27000
+                                             , wopt = list(datatype = "INT2S") # covers a bit more than -32000 to 32000
                                              )
                  , pattern = map(tile_extents)
                  , format = "file"

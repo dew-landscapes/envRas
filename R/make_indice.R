@@ -1,13 +1,13 @@
-make_indice <- function(indice
-                        , start_date
-                        , layers
-                        , base_dir
-                        , settings
+make_indice <- function(index_name
+                        , path_1
+                        , path_2
                         , terra_options = list(memfrac = 0.1)
                         , force_new = TRUE
                         ) {
   
-  out_file <- fs::path(base_dir, paste0(names(indice), "__index__", start_date, ".tif"))
+  file_name <- gsub(".*__median", paste0(index_name, "__index"), basename(path_1))
+  
+  out_file <- fs::path(dirname(path_1), file_name)
   
   if(any(! file.exists(out_file), force_new)) {
   
@@ -19,17 +19,30 @@ make_indice <- function(indice
   
     }
     
-    a <- terra::rast(layers[grepl(indice[[1]][[1]], names(layers))][[1]])
+    a <- terra::rast(path_1)
     
-    b <- terra::rast(layers[grepl(indice[[1]][[2]], names(layers))][[1]])
+    b <- terra::rast(path_2)
     
-    i_func <- function(x, y) { (x - y) / (x + y) }
+    i_func <- function(x, y) {
+      
+      res <- (x - y) / (x + y) 
+      
+      res <- scales::rescale(res
+                             , from = c(-1, 1)
+                             , to = c(-32700, 32700)
+                             )
+      
+      return(res)
+      
+    }
     
     r <- terra::lapp(c(a, b)
                      , fun = i_func
                      , filename = out_file
                      , overwrite = TRUE
-                     , wopt = list(names = names(indice))
+                     , wopt = list(names = names(index_name)
+                                   , datatype = "INT2S"
+                                   )
                      )
     
   }

@@ -4,7 +4,10 @@ source: "DEA"
 
 source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
   
-collection: "ga_ls8cls9c_gm_cyear_3"
+collection:
+  - "ga_ls5t_gm_cyear_3"
+  - "ga_ls7e_gm_cyear_3"
+  - "ga_ls8cls9c_gm_cyear_3" 
   
 layers:
   - "nbart_blue"

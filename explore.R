@@ -12,12 +12,13 @@ tmap_options(basemap.server = c(OSM = "OpenTopoMap"
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
 
+script <- "setup"
+
+targets::tar_config_set(store = tars[[script]]$store)
 
 if(FALSE) {
   
   # individual tar_make-------
-  
-  script <- "setup"
   
   tar_visnetwork(script = tars[[script]]$script
                  , store = tars[[script]]$store

@@ -59,12 +59,19 @@ targets <- list(
   ## prep -------
   ### dates -------
   , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31") 
+               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31")
                )
   , tar_target(name = min_date
-               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
+               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "extent_time")) + lubridate::as.period("P1D")
                )
-  #### bbox -------
+  , tar_target(date_df
+               , make_date_df(min_date = min_date
+                              , max_date = max_date
+                              , grain_time = envFunc::find_name(settings, "grain_time")
+                              , run_time = envFunc::find_name(settings, "run_time")
+                              )
+               )
+  ### bbox -------
   , tar_target(bbox
                , sf::st_bbox(terra::rast(base_grid_path)) |>
                  sf::st_as_sfc() |>
@@ -73,41 +80,39 @@ targets <- list(
                )
   ### items ------
   , tar_target(items
-               , rstac::stac(settings_wo$source_url) |>
-                 rstac::stac_search(collections = settings_wo$collection
-                                    , bbox = bbox
-                                    , datetime = paste0(as.character(min_date)
-                                                        , "/"
-                                                        , as.character(max_date)
-                                                        )
-                                    ) |>
-                 rstac::get_request() |>
-                 rstac::items_fetch()
+               , date_df |>
+                 dplyr::mutate(items = purrr::map2(start_date
+                                                   , end_date
+                                                   , \(x, y) get_items(url = settings_wo$source_url
+                                                                       , collection = settings_wo$collection
+                                                                       , bbox = bbox
+                                                                       , min_date = x
+                                                                       , max_date = y
+                                                                       )
+                                                   )
+                               )
                )
-  ## layers --------
+  ### layers --------
+  , tar_target(name = temporal_run
+               , envFunc::find_name(settings, "run_time")
+               )
   ### layer df --------
   , tar_target(layer_df
-               , make_layer_df(layers = settings_wo$layers
-                               , min_date
-                               , max_date
-                               , items
-                               , period = settings$grain$temp
-                               )
-               , format = "parquet"
+               , tibble::tibble(layer = settings_wo$layers) |>
+                 dplyr::cross_join(items)
                )
   ### download --------
   , tar_target(name = layer
-               , command = save_satellite_layer(items = items
+               , command = save_satellite_layer(items = layer_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
                                                 , layer = layer_df$layer
-                                                , agg_func = "mean"
                                                 , start_date = layer_df$start_date
                                                 , end_date = layer_df$end_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
-                                                , period = settings$grain$temp
+                                                , period = temporal_run
                                                 , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
+                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
                                                 # none
                                                 )

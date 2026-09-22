@@ -3,19 +3,20 @@ make_cube_dir <- function(set_scale
                           , cube_dir
                           ) {
   
-  fs::path(cube_dir
-           , envRaster::name_env_tif(x = c(set_scale$extent
-                                           , set_scale$grain
-                                           , source = set_source$source
-                                           , collection = set_source$collection
-                                           )
-                                     , context_defn = c("vector", "filt_col", "filt_level", "buffer")
-                                     , cube_defn = c("temp", "res")
-                                     , dir_only = TRUE
-                                     , prefixes = c("sat", "use")
-                                     , fill_null = TRUE
-                                     )$out_dir
-           ) |>
-    fs::dir_create()
+  dir <- fs::path(cube_dir
+                  , envRaster::name_env_tif(x = c(set_scale$extent
+                                                  , set_scale$grain
+                                                  , source = list(set_source$source)
+                                                  , collection = list(set_source$collection)
+                                                  )
+                                            , dir_only = TRUE
+                                            , prefixes = c("sat", "use")
+                                            , fill_null = TRUE
+                                            )$out_dir
+                  )
+  
+  dir <- gsub("__\\/", "/", dir)
+  
+  fs::dir_create(dir)
   
 }

@@ -1,6 +1,5 @@
 data_dir: "/projects/data"
 cube_dir: "/mnt/envshare/cube"
-max_cores: 50
 # crs
 crs:
   proj: 8059 # for projected

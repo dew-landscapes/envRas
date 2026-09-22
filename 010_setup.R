@@ -13,6 +13,7 @@ envTargets::env_tar_option_set("setup")
 tar_source(c("R/save_geoparquet.R"
              , "R/path_create_tar.R"
              , "R/make_cube_dir.R"
+             , "R/make_date_df.R"
              )
            )
 
@@ -54,11 +55,11 @@ list(
                )
   , tar_target(name = extent_sf
                , command = sfarrow::st_read_parquet(extent_sf_file) |>
-                 make_aoi(filt_col = settings$extent$filt_col
-                          , filt_level = settings$extent$filt_level
-                          , buffer = settings$extent$buffer
-                          , out_crs = settings$crs$proj
-                          )
+                 envFunc::make_aoi(filt_col = settings$extent$filt_col
+                                   , filt_level = settings$extent$filt_level
+                                   , buffer = settings$extent$buffer
+                                   , out_crs = settings$crs$proj
+                                   )
                )
   , tar_target(name = extent_sf_save
                , save_geoparquet(extent_sf
@@ -78,7 +79,7 @@ list(
   ### base grid -------
   , tar_target(base_grid_path
                , envRaster::make_base_grid(aoi = extent_sf
-                                           , out_res = settings$grain$res
+                                           , out_res = settings$grain$res_x
                                            , out_epsg = settings$crs$proj
                                            , use_mask = extent_sf
                                            , out_file = fs::path(dirname(cube_directory), "base.tif")
@@ -86,6 +87,24 @@ list(
                                            , ret = "path"
                                            , datatype = "INT1U"
                                            )
+               )
+  ## dates --------
+  , tar_target(name = max_date
+               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31")
+               )
+  , tar_target(name = min_date
+               , command = lubridate::as_date(max_date) -
+                 lubridate::as.period(envFunc::find_name(settings, "run_time")) -
+                 lubridate::as.period(envFunc::find_name(settings, "extent_time")) +
+                 lubridate::as.period("P1D")
+               )
+  , tar_target(date_df
+               , make_date_df(min_date = min_date
+                              , max_date = max_date
+                              , grain_time = envFunc::find_name(settings, "grain_time")
+                              , run_time = envFunc::find_name(settings, "run_time")
+                              )
+               , format = "parquet"
                )
   ## read me --------
   , tar_target(readme_file
