@@ -9,6 +9,7 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_date_df.R"
              , "R/download_nc_raw.R"
+             , "R/mung_climate.R"
              , "R/make_bioclim_rasters.R"
              , "R/disagg_ras.R"
              , "R/make_cube_dir.R"
@@ -115,116 +116,80 @@ targets <- list(
                , pattern = map(raw_layer_df)
                , format = "file"
                )
-  ### base grid -------
-  # Not sure this is necessary (could use extent_sf in bbox instead) but will invalidate the downloads if it is removed
-  , tar_target(base_grid_path
-               , envRaster::make_base_grid(extent_sf
-                                           , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
-                                           , out_epsg = settings$crs$proj
-                                           , use_mask = extent_sf
-                                           , out_file = fs::path(dirname(cube_directory), "base.tif")
-                                           , overwrite = TRUE
-                                           , ret = "path"
-                                           , datatype = "INT1U"
-                                           ) |>
-                 as.character()
+  ## run time climate ----------
+  , tar_target(run_time_layer_df
+               , date_df |>
+                 dplyr::mutate(run_time_id = dplyr::row_number()
+                               , start_date = purrr::map2(start_date
+                                                          , end_date
+                                                          , \(x, y) seq(x, y
+                                                                        , "month"
+                                                                        )
+                                                          )
+                               ) |>
+                 dplyr::select(- end_date) |>
+                 tidyr::unnest(cols = c(start_date)) |>
+                 dplyr::mutate(month = lubridate::month(start_date)) |>
+                 dplyr::left_join(envRaster::name_env_tif(raw_directory, parse = TRUE) |>
+                                    dplyr::left_join(tibble::enframe(raw_layer, name = "branch", value = "path")) |>
+                                    dplyr::mutate(start_date = as.Date(start_date)) |>
+                                    dplyr::select(start_date, layer, func, path)
+                                  , relationship = "many-to-many"
+                                  ) |>
+                 dplyr::mutate(out_file = fs::path(cube_directory
+                                                   , paste0(layer, "__", func, "__"
+                                                            , min(start_date)
+                                                            , ".tif"
+                                                            )
+                                                   )
+                               , .by = c(run_time_id, month, layer)
+                               ) |>
+                 tidyr::nest(files = c(start_date, path))
                )
-  ### bbox -------
-  , tar_target(bbox
-               , sf::st_bbox(terra::rast(base_grid_path)) |>
-                 sf::st_as_sfc() |>
-                 sf::st_transform(crs = settings$crs$decdeg) |> # need decimal lat/long for rstac
-                 sf::st_bbox()
+  , tar_target(run_time_layer
+               , mung_climate(files_df = run_time_layer_df$files
+                              , func = run_time_layer_df$func
+                              , aoi = extent_sf
+                              , out_file = run_time_layer_df$out_file
+                              , force_new = FALSE
+                              )
+               , format = "file"
+               , pattern = map(run_time_layer_df)
                )
-  # ## download cube ---------
-  # ### epoch df -------
-  # , tar_target(download_files_df
-  #              , date_df |>
-  #                dplyr::mutate(year = purrr::map2(start_date, end_date, \(x, y) lubridate::year(x):lubridate::year(y))) |>
-  #                tidyr::unnest(col = c(year)) |>
-  #                dplyr::cross_join(tibble::tibble(month = stringr::str_pad(1:12, 2, pad = 0))) |>
-  #                dplyr::cross_join(tibble::tibble(layer = settings_climate$layers)) |>
-  #                dplyr::mutate(func = dplyr::case_when(grepl("min", layer) ~ "min"
-  #                                                      , grepl("max", layer) ~ "max"
-  #                                                      , TRUE ~ "mean"
-  #                                                      )
-  #                              , remote_file = paste0(settings_climate$source_url
-  #                                                     , "/"
-  #                                                     , layer
-  #                                                     , "/"
-  #                                                     , lubridate::year(start_date)
-  #                                                     , "/"
-  #                                                     , paste0("ANUClimate_v2-0_"
-  #                                                              , layer
-  #                                                              , "_monthly_"
-  #                                                              , lubridate::year(start_date)
-  #                                                              , month
-  #                                                              , ".nc"
-  #                                                              )
-  #                                                     )
-  #                              ) |>
-  #                tidyr::nest(remote_files = c(year, remote_file)) |>
-  #                dplyr::mutate(start_date = lubridate::as_date(paste0(lubridate::year(start_date)
-  #                                                                     , "-"
-  #                                                                     , month
-  #                                                                     , "-01"
-  #                                                                     )
-  #                                                              )
-  #                              , out_file = fs::path(cube_directory
-  #                                                    , paste0(layer
-  #                                                             , "__"
-  #                                                             , func
-  #                                                             , "__"
-  #                                                             , start_date
-  #                                                             , ".tif"
-  #                                                             )
-  #                                                    )
-  #                              )
-  #              )
-  # ### download ------
-  # , tar_target(name = nc_download
-  #             , command = download_nc(save_file = download_files_df$out_file
-  #                                     , remote_files = download_files_df$remote_files[[1]]$remote_file
-  #                                     , bbox = bbox
-  #                                     , func = download_files_df$func
-  #                                     , force_new = FALSE
-  #                                     , base_grid_path = base_grid_path
-  #                                     )
-  #             , pattern = map(download_files_df)
-  #             , format = "file"
-  #             # This partially ran in parallel (maybe 2-3 out of 6 layers returned before error)
-  #             # but would usually fail in parallel with: error in `RNetCDF::open.nc()`: ! NetCDF: Write to read only
-  #             )
-  # ## bioclim ------
-  # , tar_target(bioclim_files_df
-  #              , tibble::tibble(path = nc_download) |>
-  #                name_env_tif(parse = TRUE) |>
-  #                tidyr::nest(files = c(start_date, name, path))
-  #              )
-  # , tar_target(name = bioclim
-  #              , command = make_bioclim_rasters(files_df = bioclim_files_df
-  #                                               , out_dir = cube_directory
-  #                                               , start_date = min_date
-  #                                               )
-  #              , format = "file"
-  #              )
-  # ## disaggregate  -------
-  # , tar_target(disagg_df
-  #              , tibble::tibble(path = bioclim)
-  #              )
-  # , tar_target(disagg_grid_path
-  #              , tar_read(base_grid_path
-  #                         , store = tars$satellite$store
-  #                         )
-  #              )
-  # , tar_target(name = disaggregated
-  #              , command = disagg_ras(input_ras_path = disagg_df$path
-  #                                     , base_grid_path = disagg_grid_path
-  #                                     , in_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
-  #                                     , out_res = settings$grain$res
-  #                                     , force_new = FALSE
-  #                                     )
-  #              , format = "file"
-  #              , pattern = map(disagg_df)
-  #              )
+  ## bioclim ------
+  , tar_target(bioclim_files_df
+               , envRaster::name_env_tif(cube_directory, parse = TRUE) |>
+                 dplyr::filter(! grepl("bio_", layer)) |>
+                 dplyr::left_join(tibble::enframe(run_time_layer, name = "branch", value = "path")) |>
+                 dplyr::select(layer, func, start_date, path) |>
+                 dplyr::mutate(year = lubridate::year(start_date)) |>
+                 tidyr::nest(files = -c(year))
+               )
+  , tar_target(name = bioclim
+               , command = make_bioclim_rasters(files_df = bioclim_files_df$files[[1]]
+                                                , out_dir = cube_directory
+                                                , force_new = FALSE
+                                                )
+               , format = "file"
+               , pattern = map(bioclim_files_df)
+               )
+  ## disaggregate  -------
+  , tar_target(disagg_df
+               , tibble::tibble(path = bioclim)
+               )
+  , tar_target(disagg_grid_path
+               , tar_read(base_grid_path
+                          , store = tars$satellite$store
+                          )
+               )
+  , tar_target(name = disaggregated
+               , command = disagg_ras(input_ras_path = disagg_df$path
+                                      , base_grid_path = disagg_grid_path
+                                      , in_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
+                                      , out_dir <- dirname(disagg_grid_path)
+                                      , force_new = FALSE
+                                      )
+               , format = "file"
+               , pattern = map(disagg_df)
+               )
   )

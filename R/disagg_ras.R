@@ -3,18 +3,19 @@ disagg_ras <- function(input_ras_path
                        , base_grid_path
                        , in_res
                        , out_res
+                       , out_dir = dirname(base_grid_path)
                        , force_new = TRUE
                        , proj_method = "bilinear"
                        ) {
   
-  out_file <- gsub(paste0("__", in_res, "\\/")
-                   , paste0("__", out_res, "/")
-                   , input_ras_path
-                   )
+  out_file <- fs::path(out_dir
+                       , basename(dirname(input_ras_path))
+                       , basename(input_ras_path)
+                       )
   
   if(any(!file.exists(out_file), force_new)) {
     
-    fs::dir_create(dirname(out_file))
+    if(!dir.exists(basename(out_file))) fs::dir_create(dirname(out_file))
     
     base <- terra::rast(base_grid_path)
     

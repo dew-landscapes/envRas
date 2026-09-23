@@ -9,10 +9,10 @@ library(crew)
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/save_satellite_layer.R"
+tar_source(c("R/get_items.R"
+             , "R/save_satellite_layer.R"
              , "R/make_indice.R"
              , "R/make_cube_dir.R"
-             , "R/make_layer_df.R"
              , "R/aggregate_ras.R"
              , "R/fill_NA.R"
              )
@@ -58,19 +58,10 @@ targets <- list(
                )
   ## prep -------
   ### dates -------
-  , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31")
-               )
-  , tar_target(name = min_date
-               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "extent_time")) + lubridate::as.period("P1D")
-               )
-  , tar_target(date_df
-               , make_date_df(min_date = min_date
-                              , max_date = max_date
-                              , grain_time = envFunc::find_name(settings, "grain_time")
-                              , run_time = envFunc::find_name(settings, "run_time")
-                              )
-               )
+  , tar_file_read(date_df
+                  , fs::path(tars$setup$store, "objects", "date_df")
+                  , arrow::read_parquet(!!.x)
+                  )
   ### bbox -------
   , tar_target(bbox
                , sf::st_bbox(terra::rast(base_grid_path)) |>
