@@ -51,11 +51,6 @@ disagg_ras <- function(input_ras_path
                   , offset = used_scoff[[2]]
                   )
     
-    create_esri_xml(tif_path = out_file
-                    , scale = used_scoff[[1]]
-                    , offset = used_scoff[[2]]
-                    )
-    
   }
     
   return(out_file)

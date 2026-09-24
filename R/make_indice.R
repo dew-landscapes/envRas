@@ -42,11 +42,6 @@ make_indice <- function(index_name
                                    )
                      )
     
-    create_esri_xml(tif_path = out_file
-                    , scale = scale
-                    , offset = offset
-                    )
-    
   }
     
   return(out_file)

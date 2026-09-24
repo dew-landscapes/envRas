@@ -22,13 +22,8 @@ mung_climate <- function(files_df
                , wopt = list(datatype = "INT2S"
                              , scale = scale
                              , offset = offset
+                             )
                )
-    )
-    
-    create_esri_xml(tif_path = out_file
-                    , scale = scale
-                    , offset = offset
-    )
     
   }
   

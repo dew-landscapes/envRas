@@ -39,11 +39,6 @@ make_bioclim_rasters <- function(files_df
                                               , offset = use_offset
                                               )
                            
-                           create_esri_xml(tif_path = out_file
-                                           , scale = use_scale
-                                           , offset = use_offset
-                                           )
-                           
                          }
                
                          return(out_file)
