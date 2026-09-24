@@ -120,7 +120,6 @@ targets <- list(
                                                               , nodata = -32768
                                                               )
                                                 )
-               , pattern = map(dem_df)
                , format = "file"
                , deployment = "main"
                )
@@ -130,7 +129,7 @@ targets <- list(
                , tar_read(run_time_layer, store = tars$climate$store)[[1]]
                , format = "file"
                )
-  , tar_target(name = agg
+  , tar_target(name = agg_mean
                , command = aggregate_ras(input_ras_path = dem
                                          , base_grid_path = aggregate_grid_path
                                          , in_res = settings$grain$res_x
@@ -139,6 +138,15 @@ targets <- list(
                                          , agg_func = "mean"
                                          )
                , format = "file"
-               , pattern = map(dem)
+               )
+  , tar_target(name = agg_sd
+               , command = aggregate_ras(input_ras_path = dem
+                                         , base_grid_path = aggregate_grid_path
+                                         , in_res = settings$grain$res_x
+                                         , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
+                                         , force_new = TRUE
+                                         , agg_func = "sd"
+                                         )
+               , format = "file"
                )
 )

@@ -69,6 +69,8 @@ targets <- list(
                                  , grid_path = base_grid_path
                                  , out_file = layer_df$out_file
                                  , force_new = TRUE
+                                 # dots to terra::project
+                                 , overwrite = TRUE
                                  )
                , pattern = map(layer_df)
                , format = "file"

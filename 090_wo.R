@@ -101,6 +101,7 @@ targets <- list(
                , command = save_satellite_layer(items = wo_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
                                                 , layer = wo_df$layer
+                                                , agg_func = "mean"
                                                 , start_date = wo_df$start_date
                                                 , end_date = wo_df$end_date
                                                 , cloud_mask = NULL
@@ -138,6 +139,7 @@ targets <- list(
                          , out_file = gsub("frequency__", "wo__", freq)
                          , force_new = TRUE
                          # dots to writeRaster
+                         , overwrite = TRUE
                          , datatype = "INT2S"
                          , scale = wo_df$scale
                          , offset = wo_df$offset

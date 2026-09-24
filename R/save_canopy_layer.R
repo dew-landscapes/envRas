@@ -2,6 +2,7 @@ save_canopy_layer <- function(aoi_sf
                               , base_grid_path
                               , out_file
                               , force_new = FALSE
+                              , ...
                               ) {
   
   run <- if(!file.exists(out_file)) TRUE else force_new
@@ -19,10 +20,7 @@ save_canopy_layer <- function(aoi_sf
                    , y = terra::rast(base_grid_path)
                    , method = "median"
                    , filename = out_file
-                   , wopt = list(datatype = "INT1S"
-                                 , overwrite = TRUE
-                                 , names = "chm"
-                                 )
+                   , ...
                    )
     
   }

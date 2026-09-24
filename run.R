@@ -46,6 +46,7 @@ if(FALSE) {
   tar_visnetwork(script = tars_local[[script]]$script
                  , store = tars_local[[script]]$store
                  , label = "time"
+                 , physics = TRUE
                  )
   
   # tar_invalidate(report, store = tars_local[[script]]$store)

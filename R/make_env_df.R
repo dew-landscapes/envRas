@@ -1,5 +1,5 @@
 make_env_df <- function(points_df
-                        , ras_df
+                        , env_paths
                         , in_epsg = 4326
                         , x = "long"
                         , y = "lat"
@@ -16,7 +16,7 @@ make_env_df <- function(points_df
                        , range_y = range(!!rlang::ensym(y), na.rm = TRUE)
                        )
 
-    r <- envRaster::make_env_stack(predictors = ras_df$path)
+    r <- envRaster::make_env_stack(predictors = env_paths)
 
     terra::window(r) <- terra::ext(min(use_aoi$range_x)
                                    , max(use_aoi$range_x)

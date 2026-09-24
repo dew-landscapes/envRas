@@ -11,4 +11,3 @@ layers:
   
 func:
   - "mean"
-  - "sd"

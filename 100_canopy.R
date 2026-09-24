@@ -61,6 +61,10 @@ targets <- list(
                                                          , "chm__eth__static.tif"
                                                          )
                                    , force_new = TRUE
+                                   # dots to terra::project
+                                   , overwrite = TRUE
+                                   , datatype = "INT1U"
+                                   , names = "chm"
                                    )
                )
   )

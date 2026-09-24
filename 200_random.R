@@ -36,10 +36,12 @@ list(
                   , readRDS(!!.x)
                   )
   ## env_df (rasters) --------
+  , tar_target(cube_directory
+               , dirname(targets::tar_read(cube_directory, store = tars$setup$store))
+               , format = "file"
+               )
   , tar_target(env_df
-               , envRaster::prepare_env(set_list = list(extent = settings$extent, grain = settings$grain)
-                                        , base_dir = settings$cube_dir
-                                        ) |>
+               , envRaster::name_env_tif(x = cube_directory, parse = TRUE) |>
                  dplyr::filter(start_date == max(start_date)
                                , .by = c(layer, func)
                                ) |>
@@ -69,9 +71,13 @@ list(
                , pattern = map(tiles_df)
                )
   #### apply ---------
+  , tar_target(env_paths
+               , env_df$path
+               , format = "file"
+               )
   , tar_target(name = random_env_branches
                , command = make_env_df(points_df = random_points
-                                       , ras_df = env_df
+                                       , env_paths = env_paths
                                        , in_epsg = settings$crs$decdeg # comes from out_epsg in random_points
                                        )
                , pattern = map(random_points)
