@@ -1,6 +1,8 @@
 make_indice <- function(index_name
                         , path_1
                         , path_2
+                        , scale
+                        , offset
                         , terra_options = list(memfrac = 0.1)
                         , force_new = TRUE
                         ) {
@@ -25,14 +27,7 @@ make_indice <- function(index_name
     
     i_func <- function(x, y) {
       
-      res <- (x - y) / (x + y) 
-      
-      res <- scales::rescale(res
-                             , from = c(-1, 1)
-                             , to = c(-32700, 32700)
-                             )
-      
-      return(res)
+      (x - y) / (x + y)
       
     }
     
@@ -42,8 +37,15 @@ make_indice <- function(index_name
                      , overwrite = TRUE
                      , wopt = list(names = names(index_name)
                                    , datatype = "INT2S"
+                                   , scale = scale
+                                   , offset = offset
                                    )
                      )
+    
+    create_esri_xml(tif_path = out_file
+                    , scale = scale
+                    , offset = offset
+                    )
     
   }
     

@@ -13,15 +13,16 @@ save_canopy_layer <- function(aoi_sf
                                           , layer = "chm"
                                           )
     
-    r <- terra::merge(tiles)
+    r <- if("SpatRasterCollection" %in% class(tiles)) terra::merge(tiles) else tiles
     
     terra::project(x = r
                    , y = terra::rast(base_grid_path)
-                   , filename = out_file
                    , method = "median"
-                   , overwrite = TRUE
-                   , datatype = "INT1U"
-                   , names = "chm"
+                   , filename = out_file
+                   , wopt = list(datatype = "INT1S"
+                                 , overwrite = TRUE
+                                 , names = "chm"
+                                 )
                    )
     
   }

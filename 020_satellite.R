@@ -12,6 +12,7 @@ tar_source(c("R/make_cube_dir.R"
              , "R/get_items.R"
              , "R/save_satellite_layer.R"
              , "R/make_indice.R"
+             , "R/create_esri_xml.R" # used inside save_satellite_layer
              )
            )
 
@@ -42,6 +43,7 @@ targets <- list(
                                , set_source = settings_satellite
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid path-------
   , tar_target(base_grid_path
@@ -75,42 +77,52 @@ targets <- list(
                                                    )
                                )
                )
-  ### layers --------
+  ## reflectance --------
   , tar_target(name = temporal_run
                , envFunc::find_name(settings, "run_time")
                )
-  ### layer df --------
-  , tar_target(layer_df
-               , tibble::tibble(layer = settings_satellite$layers) |>
-                 dplyr::cross_join(items)
+  ### reflectance df --------
+  , tar_target(reflectance_df
+               , tibble::tibble(nbart_layer = settings_satellite$layers) |>
+                 dplyr::mutate(layer = gsub("nbart_", "", nbart_layer)) |>
+                 dplyr::cross_join(items) |>
+                 dplyr::left_join(envRaster::ras_layers |>
+                                    dplyr::select(layer, scale, offset) |>
+                                    dplyr::distinct()
+                                  , relationship = "one-to-one"
+                                  )
                )
-  ### download --------
-  , tar_target(name = layer
-               , command = save_satellite_layer(items = layer_df$items[[1]]
+  ### reflectance --------
+  , tar_target(name = reflectance
+               , command = save_satellite_layer(items = reflectance_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
-                                                , layer = layer_df$layer
-                                                , start_date = layer_df$start_date
-                                                , end_date = layer_df$end_date
+                                                , layer = reflectance_df$nbart_layer
+                                                , start_date = reflectance_df$start_date
+                                                , end_date = reflectance_df$end_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = FALSE
+                                                , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
-                                                              , scale = 1
-                                                              , offset = 0
-                                                              , nodata = -999
+                                                              , scale = reflectance_df$scale
+                                                              , offset = reflectance_df$offset
+                                                              , nodata = -32768
                                                               )
                                                 )
-               , pattern = map(layer_df)
+               , pattern = map(reflectance_df)
                , format = "file"
+               , deployment = "main"
                )
   ## variability -----
   ### variability_df------
   , tar_target(name = variability_df
                , tibble::tibble(layer = settings_satellite$variability) |>
-                 dplyr::cross_join(items)
+                 dplyr::cross_join(items) |>
+                 dplyr::left_join(envRaster::ras_layers |>
+                                    dplyr::select(layer, scale, offset)
+                                  )
                )
   ### mean --------
   , tar_target(name = variability
@@ -123,12 +135,18 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = FALSE
+                                                , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # no pack
+                                                , pack = list(type = "int16"
+                                                              , scale = variability_df$scale
+                                                              , offset = variability_df$offset
+                                                              , nodata = -32768
+                                                              )
                                                 )
                , pattern = map(variability_df)
                , format = "file"
+               , deployment = "main"
                )
   ### max --------
   , tar_target(name = max
@@ -141,50 +159,67 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = FALSE
+                                                , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # no pack
+                                                , pack = list(type = "int16"
+                                                              , scale = variability_df$scale
+                                                              , offset = variability_df$offset
+                                                              , nodata = -32768
+                                                              )
                                                 )
                , pattern = map(variability_df)
                , format = "file"
+               , deployment = "main"
                )
   ## indices------
-  ### indices list --------
+  , tar_target(index_prep
+               , reflectance_df |>
+                 dplyr::bind_cols(tibble::enframe(reflectance, name = "branch", value = "path")) |>
+                 dplyr::select(! c(dplyr::where(is.list)
+                                   , scale, offset, nbart_layer, branch, path
+                                   )
+                               )
+               )
+  ### indice_df --------
   , tar_target(indice_df
                , settings_satellite$indices |>
                  tibble::as_tibble() |>
                  dplyr::mutate(layer_index = paste0("layer_", dplyr::row_number())) |>
                  tidyr::pivot_longer(tidyselect::any_of(names(settings_satellite$indices))
-                                     , names_to = "indice"
+                                     , names_to = "index"
                                      , values_to = "layer"
-                                     )
-               )
-  ### layers --------
-  , tar_target(combined_layers
-               , date_df |>
-                 dplyr::cross_join(indice_df) |>
+                                     ) |>
+                 dplyr::inner_join(index_prep
+                                   , relationship = "many-to-many"
+                                   ) |>
                  dplyr::mutate(layer = fs::path(cube_directory
-                                                , paste0(layer
-                                                         , "__median__"
-                                                         , start_date
-                                                         , ".tif"
-                                                         )
-                                                )
+                                               , paste0(layer
+                                                        , "__median__"
+                                                        , start_date
+                                                        , ".tif"
+                                                        )
+                                               )
                                ) |>
-                 dplyr::filter(file.exists(layer)) |>
                  tidyr::pivot_wider(names_from = layer_index
                                     , values_from = layer
-                                    )
+                                    ) |>
+                 dplyr::rename(layer = index) |>
+                 dplyr::left_join(envRaster::ras_layers |>
+                                    dplyr::select(layer, scale, offset)
+                                  )
                )
   ### mung -------
   , tar_target(name = indice
-               , command = make_indice(index_name = combined_layers$indice
-                                       , path_1 = combined_layers$layer_1
-                                       , path_2 = combined_layers$layer_2
+               , command = make_indice(index_name = indice_df$layer
+                                       , path_1 = indice_df$layer_1
+                                       , path_2 = indice_df$layer_2
+                                       , scale = indice_df$scale
+                                       , offset = indice_df$offset
                                        , terra_options = list(memfrac = 0.1)
-                                       , force_new = FALSE
+                                       , force_new = TRUE
                                        )
-               , pattern = map(combined_layers)
+               , pattern = map(indice_df)
                , format = "file"
                )
   )

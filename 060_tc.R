@@ -14,12 +14,12 @@ tar_source(c("R/make_cube_dir.R"
              , "R/get_items.R"
              , "R/save_satellite_layer.R"
              , "R/make_indice.R"
+             , "R/create_esri_xml.R"
              )
            )
 
 # tar options --------
-# parallel over individual layer rather than across layers, so no need for crew_controller_local etc
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages)))
+envTargets::env_tar_option_set("tc")
 
 targets <- list(
   # targets --------
@@ -45,6 +45,7 @@ targets <- list(
                                , set_source = settings_tc
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -53,19 +54,10 @@ targets <- list(
                )
   ## prep -------
   ### dates -------
-  , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31")
-               )
-  , tar_target(name = min_date
-               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "extent_time")) + lubridate::as.period("P1D")
-               )
-  , tar_target(date_df
-               , make_date_df(min_date = min_date
-                              , max_date = max_date
-                              , grain_time = envFunc::find_name(settings, "grain_time")
-                              , run_time = envFunc::find_name(settings, "run_time")
-                              )
-               )
+  , tar_file_read(date_df
+                  , fs::path(tars$setup$store, "objects", "date_df")
+                  , arrow::read_parquet(!!.x)
+                  )
   ### bbox -------
   , tar_target(bbox
                , sf::st_bbox(terra::rast(base_grid_path)) |>
@@ -87,31 +79,39 @@ targets <- list(
                                                    )
                                )
                )
-  ### layers --------
+  ## layers --------
   , tar_target(name = temporal_run
                , envFunc::find_name(settings, "run_time")
                )
   ### layer df --------
-  , tar_target(layer_df
+  , tar_target(tc_df
                , tibble::tibble(layer = settings_tc$layers) |>
-                 dplyr::cross_join(items)
+                 dplyr::cross_join(items) |>
+                 dplyr::left_join(envRaster::ras_layers |>
+                                    dplyr::select(layer, scale, offset)
+                                  )
                )
   ### download --------
-  , tar_target(name = layer
-               , command = save_satellite_layer(items = layer_df$items[[1]]
+  , tar_target(name = tc
+               , command = save_satellite_layer(items = tc_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
-                                                , layer = layer_df$layer
-                                                , start_date = layer_df$start_date
-                                                , end_date = layer_df$end_date
+                                                , layer = tc_df$layer
+                                                , start_date = tc_df$start_date
+                                                , end_date = tc_df$end_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = FALSE
+                                                , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
-                                                # none
+                                                , pack = list(type = "int16"
+                                                              , scale = tc_df$scale
+                                                              , offset = tc_df$offset
+                                                              , nodata = -32768
+                                                              )
                                                 )
-               , pattern = map(layer_df)
+               , pattern = map(tc_df)
                , format = "file"
+               , deployment = "main"
                )
   )

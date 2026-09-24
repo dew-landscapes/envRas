@@ -15,6 +15,7 @@ tar_source(c("R/generate_random_env.R"
 
 # tar options -------
 envTargets::env_tar_option_set("random")
+
 tar_option_set(trust_timestamps = TRUE) # avoid hashing large tif files
 
 list(
@@ -39,12 +40,15 @@ list(
                , envRaster::prepare_env(set_list = list(extent = settings$extent, grain = settings$grain)
                                         , base_dir = settings$cube_dir
                                         ) |>
+                 dplyr::filter(start_date == max(start_date)
+                               , .by = c(layer, func)
+                               ) |>
                  dplyr::filter(! grepl("ecosystems", path))
                )
   ## random -------
   #### split ------
   , tar_target(base_grid_path
-               , tar_read(base_grid_path, store = tars$satellite$store)
+               , targets::tar_read(base_grid_path, store = tars$satellite$store)
                , format = "file"
                )
   , tar_target(tiles_df

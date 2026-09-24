@@ -12,15 +12,8 @@ tar_source(c("R/save_soil_layer.R"
              )
            )
 
-# tar options --------
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages))
-               # , controller = crew_controller_local(workers = use_cores
-               #                                      , crashes_max = 0L
-               #                                      , options_local = crew_options_local(log_directory = fs::path(tars$soil$store, "log")
-               #                                                                           , log_join = TRUE
-               #                                                                           )
-               #                                      )
-               )
+# tar options ------
+envTargets::env_tar_option_set("soil")
 
 # targets --------
 targets <- list(
@@ -41,6 +34,7 @@ targets <- list(
                                , set_source = settings_soil
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -74,10 +68,11 @@ targets <- list(
                                  , key = Sys.getenv("TERN_API_KEY")
                                  , grid_path = base_grid_path
                                  , out_file = layer_df$out_file
-                                 , force_new = FALSE
+                                 , force_new = TRUE
                                  )
                , pattern = map(layer_df)
                , format = "file"
+               , deployment = "main"
                )
 )
 

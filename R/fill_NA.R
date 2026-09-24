@@ -16,6 +16,13 @@ fill_NA <- function(r
                          , ...
                          )
     
+    used_scoff <- terra::scoff(terra::rast(out_file))
+    
+    create_esri_xml(tif_path = out_file
+                    , scale = used_scoff[[1]]
+                    , offset = used_scoff[[2]]
+                    )
+    
   }
   
   return(out_file)

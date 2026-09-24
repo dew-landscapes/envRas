@@ -8,3 +8,7 @@ collection: "ga_srtm_dem1sv1_0"
   
 layers:
   - "dem"
+  
+func:
+  - "mean"
+  - "sd"

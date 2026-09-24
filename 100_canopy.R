@@ -11,12 +11,12 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_cube_dir.R"
              , "R/save_canopy_layer.R"
+             , "R/create_esri_xml.R"
              )
            )
 
-# tar options --------
-# parallel over individual layer rather than across layers, so no need for crew_controller_local etc
-tar_option_set(packages = yaml::read_yaml("settings/packages.yaml")$canopy)
+# tar options ------
+envTargets::env_tar_option_set("canopy")
 
 targets <- list(
   # targets --------
@@ -46,6 +46,7 @@ targets <- list(
                                , set_source = settings_canopy
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -57,9 +58,9 @@ targets <- list(
                , save_canopy_layer(aoi_sf = extent_sf
                                    , base_grid_path
                                    , out_file = fs::path(cube_directory
-                                                         , "chm__eth__2020-01-01.tif"
+                                                         , "chm__eth__static.tif"
                                                          )
-                                   , force_new = FALSE
+                                   , force_new = TRUE
                                    )
                )
   )

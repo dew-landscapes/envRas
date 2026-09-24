@@ -9,17 +9,16 @@ library(crew)
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/save_satellite_layer.R"
-             , "R/make_indice.R"
+tar_source(c("R/get_items.R"
+             , "R/save_satellite_layer.R"
              , "R/make_cube_dir.R"
-             , "R/make_layer_df.R"
              , "R/aggregate_ras.R"
+             , "R/create_esri_xml.R" # used inside save_satellite_layer
              )
            )
 
-# tar options --------
-# parallel over individual layer rather than across layers, so no need for crew_controller_local etc
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages)))
+# tar options ------
+envTargets::env_tar_option_set("dem")
 
 targets <- list(
   # targets --------
@@ -49,6 +48,7 @@ targets <- list(
                                , set_source = settings_dem
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -57,11 +57,17 @@ targets <- list(
                )
   ## prep -------
   ### dates -------
+  # these are just the dates recorded in the stac for dem
   , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31") 
+               , "2014-12-31"
                )
   , tar_target(name = min_date
-               , command = "1987-01-01" #lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
+               , command = "2014-01-01"
+               )
+  , tar_target(date_df
+               , tibble::tibble(start_date = min_date
+                                , end_date = max_date
+                                )
                )
   #### bbox -------
   , tar_target(bbox
@@ -72,71 +78,67 @@ targets <- list(
                )
   ### items ------
   , tar_target(items
-               , rstac::stac(settings_dem$source_url) |>
-                 rstac::stac_search(collections = settings_dem$collection
-                                    , bbox = bbox
-                                    , datetime = paste0(as.character(min_date)
-                                                        , "/"
-                                                        , as.character(max_date)
-                                                        )
-                                    ) |>
-                 rstac::get_request() |>
-                 rstac::items_fetch()
-               )
-  ## layers --------
-  ### layer df --------
-  , tar_target(layer_df
-               , make_layer_df(layers = settings_dem$layers
-                               , min_date
-                               , max_date
-                               , items
-                               , period = settings$grain$temp
+               , date_df |>
+                 dplyr::mutate(items = purrr::map2(start_date
+                                                   , end_date
+                                                   , \(x, y) get_items(url = settings_dem$source_url
+                                                                       , collection = settings_dem$collection
+                                                                       , bbox = bbox
+                                                                       , min_date = x
+                                                                       , max_date = y
+                                                                       )
+                                                   )
                                )
-               , format = "parquet"
+               )
+  ## dem --------
+  ### dem df --------
+  , tar_target(dem_df
+               , items |>
+                 dplyr::cross_join(tibble::tibble(layer = settings_dem$layers)) |>
+                 dplyr::cross_join(tibble::tibble(func = settings_dem$func)) |>
+                 dplyr::left_join(envRaster::ras_layers |>
+                                    dplyr::select(layer, scale, offset)
+                                  )
                )
   ### download --------
-  , tar_target(name = layer
-               , command = save_satellite_layer(items = items
+  , tar_target(name = dem
+               , command = save_satellite_layer(items = dem_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
-                                                , layer = layer_df$layer
-                                                , agg_func = "median"
-                                                , start_date = layer_df$start_date
-                                                , end_date = layer_df$end_date
+                                                , layer = dem_df$layer
+                                                , agg_func = dem_df$func
+                                                , start_date = dem_df$start_date
+                                                , end_date = dem_df$end_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
-                                                , period = settings$grain$temp
-                                                , force_new = FALSE
+                                                , period = settings$grain$grain_time
+                                                , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
                                                 # gdalcubes::write_tif args
-                                                # none
+                                                , pack = list(type = "int16"
+                                                              , scale = dem_df$scale
+                                                              , offset = dem_df$offset
+                                                              , nodata = -32768
+                                                              )
                                                 )
-               , pattern = map(layer_df)
+               , pattern = map(dem_df)
                , format = "file"
+               , deployment = "main"
                )
   ## mung to coarse grid ----------
   ## aggregate -------
   , tar_target(aggregate_grid_path
-               , tar_read(base_grid_path, store = tars$climate$store)
+               , tar_read(run_time_layer, store = tars$climate$store)[[1]]
                , format = "file"
                )
-  , tar_target(name = agg_mean
-               , command = aggregate_ras(input_ras_path = layer
+  , tar_target(name = agg
+               , command = aggregate_ras(input_ras_path = dem
                                          , base_grid_path = aggregate_grid_path
-                                         , in_res = settings$grain$res
-                                         , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
-                                         , force_new = FALSE
+                                         , in_res = settings$grain$res_x
+                                         , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
+                                         , force_new = TRUE
                                          , agg_func = "mean"
                                          )
                , format = "file"
-               )
-  , tar_target(name = agg_sd
-               , command = aggregate_ras(input_ras_path = layer
-                                         , base_grid_path = aggregate_grid_path
-                                         , in_res = settings$grain$res
-                                         , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res
-                                         , force_new = FALSE
-                                         , agg_func = "sd"
-                                         )
-               , format = "file"
+               , pattern = map(dem)
                )
 )

@@ -13,30 +13,8 @@ tar_source(c("R/make_dist_tile.R"
              )
            )
 
-## cores --------
-use_cores <- envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
-
-## RAM -------
-total_terra_ram_prop <- 0.6 # across all cores
-terra_memfrac <- total_terra_ram_prop / use_cores  # prop of available memory allowed per core (or per SDM)
-
-# controllers  ---------
-this_run_start <- format(Sys.time(), "%Y%m%d_%H%M")
-
-main_controller <- crew_controller_local(workers = use_cores
-                                         , options_local = crew_options_local(log_directory = fs::path(tars$coast$store
-                                                                                                       , "log"
-                                                                                                       , this_run_start
-                                                                                                       , "main_controller"
-                                                                                                       )
-                                                                              )
-                                         , name = "main_controller"
-                                         , tasks_max = 1
-                                         )
 # tar options --------
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$coast))
-               , controller = main_controller
-               )
+envTargets::env_tar_option_set("coast")
 
 # targets --------
 targets <- list(
@@ -61,6 +39,7 @@ targets <- list(
                                , set_source = settings_coast
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid path-------
   , tar_target(base_grid_path
@@ -77,19 +56,13 @@ targets <- list(
   # no separate mask needed as the coast is the mask
   ## prep -------
   ### dates -------
-  , tar_target(name = max_date
-               , paste0(as.numeric(format(Sys.Date(), "%Y")) - 1, "-12-31") 
-               )
   , tar_target(name = min_date
-               , command = lubridate::as_date(max_date) - lubridate::as.period(envFunc::find_name(settings, "temp")) + lubridate::as.period("P1D")
+               , command = "static"
                )
   ### out file --------
   , tar_target(coast_tif_file
                  , fs::path(cube_directory
-                            , paste0("coast__distance__"
-                                     , min_date
-                                     , ".tif"
-                                     )
+                            , "coast__distance__static.tif"
                             )
                  )
   ## coast--------
@@ -97,22 +70,16 @@ targets <- list(
   , tar_target(name = tile_extents
                , envTargets::make_tile_extents(base_grid_path = base_grid_path)
                )
-    
-    , tar_target(use_memfrac
-                 , if(nrow(tile_extents >= use_cores)) {terra_memfrac} else
-                   {(total_ram * total_terra_ram_prop / nrow(tile_extents)) / total_ram}
-                 )
   ### apply -------
   , tar_target(tile_coast
                , make_dist_tile(base_grid_path = base_grid_path
                                 , extent = tile_extents
                                 , sf_dist_file = coast_file
-                                , terra_options = list(memfrac = use_memfrac)
                                 , sf_mask_file = coast_file # = coast_mask_file
                                 , sf_mask_positive = TRUE
                                 , dist_limit = 5000
                                 , out_dir = fs::path(tars$coast$store, "tiles")
-                                , force_new = FALSE
+                                , force_new = TRUE
                                 # via dots... to terra::lapp
                                 , wopt = list(datatype = "INT2S") # easily encompasses -10000 to 10000 m
                                 )
@@ -121,7 +88,7 @@ targets <- list(
                )
   ### combine -------
   , tar_target(coast
-               , combine_tiles(tile_coast
+               , combine_tiles(tiles = tile_coast
                                , out_file = coast_tif_file
                                , sf_mask = extent_sf
                                # via dots to terra::writeRaster

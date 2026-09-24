@@ -15,12 +15,12 @@ tar_source(c("R/get_items.R"
              , "R/make_cube_dir.R"
              , "R/aggregate_ras.R"
              , "R/fill_NA.R"
+             , "R/create_esri_xml.R"
              )
            )
 
-# tar options --------
-# parallel over individual layer rather than across layers, so no need for crew_controller_local etc
-tar_option_set(packages = sort(unique(yaml::read_yaml("settings/packages.yaml")$packages)))
+# tar options ------
+envTargets::env_tar_option_set("wo")
 
 targets <- list(
   # targets --------
@@ -50,6 +50,7 @@ targets <- list(
                                , set_source = settings_wo
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -83,32 +84,40 @@ targets <- list(
                                                    )
                                )
                )
-  ### layers --------
+  ## layers --------
   , tar_target(name = temporal_run
                , envFunc::find_name(settings, "run_time")
                )
   ### layer df --------
-  , tar_target(layer_df
+  , tar_target(wo_df
                , tibble::tibble(layer = settings_wo$layers) |>
-                 dplyr::cross_join(items)
+                 dplyr::cross_join(items) |>
+                 dplyr::left_join(envRaster::ras_layers |>
+                                    dplyr::select(layer, scale, offset)
+                                  )
                )
   ### download --------
-  , tar_target(name = layer
-               , command = save_satellite_layer(items = layer_df$items[[1]]
+  , tar_target(name = freq
+               , command = save_satellite_layer(items = wo_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
-                                                , layer = layer_df$layer
-                                                , start_date = layer_df$start_date
-                                                , end_date = layer_df$end_date
+                                                , layer = wo_df$layer
+                                                , start_date = wo_df$start_date
+                                                , end_date = wo_df$end_date
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = FALSE
+                                                , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
-                                                # none
+                                                , pack = list(type = "int16"
+                                                              , scale = wo_df$scale
+                                                              , offset = wo_df$offset
+                                                              , nodata = -32768
+                                                              )
                                                 )
-               , pattern = map(layer_df)
+               , pattern = map(wo_df)
                , format = "file"
+               , deployment = "main"
                )
   ## fill NA values ----------
   # 'steep' areas get NA values in water observation. who knows why, really.
@@ -123,13 +132,17 @@ targets <- list(
                , format = "parquet"
                )
   , tar_target(wo
-               , fill_NA(r = layer
+               , fill_NA(r = freq
                          , mask = env_df$path[grepl("bio01", env_df$name)]
                          , fill_val = 0
-                         , out_file = gsub("frequency__", "wo__", layer)
-                         , force_new = FALSE
+                         , out_file = gsub("frequency__", "wo__", freq)
+                         , force_new = TRUE
+                         # dots to writeRaster
+                         , datatype = "INT2S"
+                         , scale = wo_df$scale
+                         , offset = wo_df$offset
                          )
-               , pattern = map(layer)
+               , pattern = map(freq, wo_df)
                , format = "file"
                )
 )

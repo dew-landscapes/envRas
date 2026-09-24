@@ -1,4 +1,6 @@
 make_bioclim_rasters <- function(files_df
+                                 , scale = 1
+                                 , offset = 0
                                  , out_dir
                                  , force_new = TRUE
                                  ) {
@@ -25,13 +27,24 @@ make_bioclim_rasters <- function(files_df
                
                          if(any(!file.exists(out_file), force_new)) {
                            
+                           use_scale <- envRaster::ras_layers$scale[envRaster::ras_layers$layer == use_x]
+                           use_offset <- envRaster::ras_layers$offset[envRaster::ras_layers$layer == use_x]
+                           
                            terra::writeRaster(bc[[x]]
                                               , filename = out_file
                                               , overwrite = TRUE
                                               , names = use_x
+                                              , datatype = "INT2S"
+                                              , scale = use_scale
+                                              , offset = use_offset
                                               )
                            
-                           }
+                           create_esri_xml(tif_path = out_file
+                                           , scale = use_scale
+                                           , offset = use_offset
+                                           )
+                           
+                         }
                
                          return(out_file)
                          

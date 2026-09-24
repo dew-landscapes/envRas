@@ -1,5 +1,7 @@
 mung_climate <- function(files_df
                          , func = "mean"
+                         , scale = 1
+                         , offset = 0
                          , aoi
                          , out_file
                          , force_new = FALSE
@@ -17,7 +19,16 @@ mung_climate <- function(files_df
                , fun = get(func)
                , filename = out_file
                , overwrite = TRUE
+               , wopt = list(datatype = "INT2S"
+                             , scale = scale
+                             , offset = offset
                )
+    )
+    
+    create_esri_xml(tif_path = out_file
+                    , scale = scale
+                    , offset = offset
+    )
     
   }
   

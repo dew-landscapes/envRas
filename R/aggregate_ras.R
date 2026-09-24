@@ -5,21 +5,23 @@ aggregate_ras <- function(input_ras_path
                           , out_res
                           , force_new = TRUE
                           , proj_method = "bilinear"
-                          , agg_func = "median"
+                          , agg_func = "mean"
                           ) {
   
-  out_dir <- gsub(paste0("__", in_res, "\\/")
-                  , paste0("__", out_res, "/")
-                  , dirname(input_ras_path)
-                  )
+  cube_dir <- dirname(dirname(dirname(dirname(input_ras_path))))
   
-  out_file_name <- envRaster::name_env_tif(input_ras_path, parse = TRUE) |>
-    dplyr::mutate(func = agg_func) |>
-    envRaster::name_env_tif() |>
-    dplyr::pull(out_file) |>
-    basename()
+  dir_df <- envRaster::name_env_tif(input_ras_path
+                                     , parse = TRUE
+                                     ) |>
+    dplyr::mutate(res_x = out_res
+                  , res_y = out_res
+                  ) |>
+    envRaster::name_env_tif(dir_only = TRUE)
   
-  out_file <- fs::path(out_dir, out_file_name)
+  out_file <- fs::path(cube_dir
+                       , dir_df$out_dir
+                       , basename(input_ras_path)
+                       )
   
   if(any(!file.exists(out_file), force_new)) {
     

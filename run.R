@@ -41,7 +41,7 @@ if(FALSE) {
   
   # individual tar_make-------
   
-  script <- "satellite"
+  script <- "setup"
   
   tar_visnetwork(script = tars_local[[script]]$script
                  , store = tars_local[[script]]$store

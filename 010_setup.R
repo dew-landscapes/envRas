@@ -40,6 +40,12 @@ list(
                   , "settings/satellite.yaml"
                   , yaml::read_yaml(!!.x)
                   )
+  ### cube ------
+  # make all time steps or just last?
+  , tar_file_read(settings_cube
+                  , "settings/cube.yaml"
+                  , yaml::read_yaml(!!.x)
+                  )
   ## extent directory -------
   , tar_target(extent_dir
                , path_create_tar(envFunc::name_env_out(set_list = list(extent = settings$extent)
@@ -75,6 +81,7 @@ list(
                                , set_source = settings_satellite
                                , cube_dir = settings$cube_dir
                                )
+               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path
@@ -103,6 +110,7 @@ list(
                               , max_date = max_date
                               , grain_time = envFunc::find_name(settings, "grain_time")
                               , run_time = envFunc::find_name(settings, "run_time")
+                              , make_cube = settings_cube$make_cube
                               )
                , format = "parquet"
                )
