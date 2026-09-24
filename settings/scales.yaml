@@ -1,16 +1,16 @@
 # directories
 fine:
   extent:
-    vector: "parks"
-    filt_col: "RESNAME"
-    filt_level: "Bakara"
-    buffer: 10000
+    vector: "sa_br_dissolve"
+    filt_col: NULL
+    filt_level: NULL
+    buffer: 0
     extent_time: "P50Y" # must be a period of years
   grain:
     res_x: 30
     res_y: 30
     grain_time: "P1Y" # must be either P1M or P1Y (used to set contexts)
-    run_time: "P10Y"
+    run_time: "P5Y"
 
 coarse:
   grain:
