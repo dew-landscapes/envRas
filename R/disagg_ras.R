@@ -19,6 +19,12 @@ disagg_ras <- function(input_ras_path
     
     base <- terra::rast(base_grid_path)
     
+    base_mask <- sf::st_bbox(terra::rast(input_ras_path)) |>
+      sf::st_as_sfc() |>
+      sf::st_segmentize(dfMaxLength = 50000) |>
+      sf::st_transform(crs = sf::st_crs(base)) |>
+      terra::vect()
+    
     r <- terra::rast(input_ras_path) |>
       terra::project(terra::crs(base)
                      , method = proj_method
@@ -28,15 +34,27 @@ disagg_ras <- function(input_ras_path
       
     rat_1 <- floor(sqrt(ratio))
     
+    used_scoff <- terra::scoff(terra::rast(input_ras_path))
+    
     r <- r |>
       terra::disagg(rat_1
                     , method = "bilinear"
                     ) |>
       terra::project(base
                      , method = "bilinear"
-                     , filename = out_file
-                     , overwrite = TRUE
-                     )
+                     ) |>
+      terra::mask(mask = base_mask
+                  , filename = out_file
+                  , overwrite = TRUE
+                  , datatype = "INT2S"
+                  , scale = used_scoff[[1]]
+                  , offset = used_scoff[[2]]
+                  )
+    
+    create_esri_xml(tif_path = out_file
+                    , scale = used_scoff[[1]]
+                    , offset = used_scoff[[2]]
+                    )
     
   }
     

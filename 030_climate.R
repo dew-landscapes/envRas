@@ -190,11 +190,11 @@ targets <- list(
                           , store = tars$satellite$store
                           )
                )
-  , tar_target(name = disaggregated
+  , tar_target(name = disagg
                , command = disagg_ras(input_ras_path = disagg_df$path
                                       , base_grid_path = disagg_grid_path
                                       , in_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
-                                      , out_dir <- dirname(disagg_grid_path)
+                                      , out_dir = dirname(disagg_grid_path)
                                       , force_new = TRUE
                                       )
                , format = "file"
