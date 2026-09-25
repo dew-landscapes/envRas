@@ -12,7 +12,6 @@ tar_source(c("R/make_cube_dir.R"
              , "R/get_items.R"
              , "R/save_satellite_layer.R"
              , "R/make_indice.R"
-             , "R/create_esri_xml.R" # used inside save_satellite_layer
              )
            )
 
@@ -89,7 +88,6 @@ targets <- list(
                  dplyr::left_join(envRaster::ras_layers |>
                                     dplyr::select(layer, scale, offset) |>
                                     dplyr::distinct()
-                                  , relationship = "one-to-one"
                                   )
                )
   ### reflectance --------

@@ -14,7 +14,6 @@ tar_source(c("R/make_cube_dir.R"
              , "R/get_items.R"
              , "R/save_satellite_layer.R"
              , "R/make_indice.R"
-             , "R/create_esri_xml.R"
              )
            )
 
@@ -97,6 +96,7 @@ targets <- list(
                , command = save_satellite_layer(items = fc_df$items[[1]]
                                                 , base_grid = terra::rast(base_grid_path)
                                                 , layer = fc_df$layer
+                                                , agg_func = "mean"
                                                 , start_date = fc_df$start_date
                                                 , end_date = fc_df$end_date
                                                 , cloud_mask = NULL
@@ -105,10 +105,10 @@ targets <- list(
                                                 , force_new = TRUE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
-                                                , pack = list(type = "int16"
+                                                , pack = list(type = "uint8"
                                                               , scale = fc_df$scale
                                                               , offset = fc_df$offset
-                                                              , nodata = -32768
+                                                              , nodata = 0
                                                               )
                                                 )
                , pattern = map(fc_df)

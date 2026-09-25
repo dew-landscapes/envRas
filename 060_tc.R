@@ -14,7 +14,6 @@ tar_source(c("R/make_cube_dir.R"
              , "R/get_items.R"
              , "R/save_satellite_layer.R"
              , "R/make_indice.R"
-             , "R/create_esri_xml.R"
              )
            )
 

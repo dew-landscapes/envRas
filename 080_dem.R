@@ -13,7 +13,6 @@ tar_source(c("R/get_items.R"
              , "R/save_satellite_layer.R"
              , "R/make_cube_dir.R"
              , "R/aggregate_ras.R"
-             , "R/create_esri_xml.R" # used inside save_satellite_layer
              )
            )
 

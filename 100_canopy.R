@@ -11,7 +11,6 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_cube_dir.R"
              , "R/save_canopy_layer.R"
-             , "R/create_esri_xml.R"
              )
            )
 

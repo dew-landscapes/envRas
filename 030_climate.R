@@ -13,7 +13,6 @@ tar_source(c("R/make_date_df.R"
              , "R/make_bioclim_rasters.R"
              , "R/disagg_ras.R"
              , "R/make_cube_dir.R"
-             , "R/create_esri_xml.R"
              )
            )
 

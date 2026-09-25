@@ -15,7 +15,6 @@ tar_source(c("R/get_items.R"
              , "R/make_cube_dir.R"
              , "R/aggregate_ras.R"
              , "R/fill_NA.R"
-             , "R/create_esri_xml.R"
              )
            )
 
@@ -140,7 +139,7 @@ targets <- list(
                          , force_new = TRUE
                          # dots to writeRaster
                          , overwrite = TRUE
-                         , datatype = "INT2S"
+                         , datatype = "INT1U"
                          , scale = wo_df$scale
                          , offset = wo_df$offset
                          )
