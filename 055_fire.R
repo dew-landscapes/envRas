@@ -92,7 +92,7 @@ list(
                                              , polygon_field = "fireyear"
                                              , polygon_func = method
                                              , out_dir = fs::path(tars$fire$store, paste0("tiles_", method))
-                                             , force_new = TRUE
+                                             , force_new = FALSE
                                              # via dots... to terra::lapp
                                              , wopt = list(datatype = "INT2S") # covers a bit more than -32000 to 32000
                                              )

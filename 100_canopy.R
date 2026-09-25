@@ -59,7 +59,7 @@ targets <- list(
                                    , out_file = fs::path(cube_directory
                                                          , "chm__eth__static.tif"
                                                          )
-                                   , force_new = TRUE
+                                   , force_new = FALSE
                                    # dots to terra::project
                                    , overwrite = TRUE
                                    , datatype = "INT1U"

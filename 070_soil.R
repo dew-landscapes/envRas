@@ -68,7 +68,7 @@ targets <- list(
                                  , key = Sys.getenv("TERN_API_KEY")
                                  , grid_path = base_grid_path
                                  , out_file = layer_df$out_file
-                                 , force_new = TRUE
+                                 , force_new = FALSE
                                  # dots to terra::project
                                  , overwrite = TRUE
                                  )

@@ -158,7 +158,7 @@ targets <- list(
                               , scale = run_time_layer_df$scale
                               , offset = run_time_layer_df$offset
                               , out_file = run_time_layer_df$out_file
-                              , force_new = TRUE
+                              , force_new = FALSE
                               )
                , format = "file"
                , pattern = map(run_time_layer_df)
@@ -175,7 +175,7 @@ targets <- list(
   , tar_target(name = bioclim
                , command = make_bioclim_rasters(files_df = bioclim_files_df$files[[1]]
                                                 , out_dir = cube_directory
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 )
                , format = "file"
                , pattern = map(bioclim_files_df)
@@ -194,7 +194,7 @@ targets <- list(
                                       , base_grid_path = disagg_grid_path
                                       , in_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
                                       , out_dir = dirname(disagg_grid_path)
-                                      , force_new = TRUE
+                                      , force_new = FALSE
                                       )
                , format = "file"
                , pattern = map(disagg_df)

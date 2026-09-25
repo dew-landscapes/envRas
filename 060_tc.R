@@ -100,7 +100,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"

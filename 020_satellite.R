@@ -100,7 +100,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
@@ -133,7 +133,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # no pack
                                                 , pack = list(type = "int16"
@@ -157,7 +157,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # no pack
                                                 , pack = list(type = "int16"
@@ -215,7 +215,7 @@ targets <- list(
                                        , scale = indice_df$scale
                                        , offset = indice_df$offset
                                        , terra_options = list(memfrac = 0.1)
-                                       , force_new = TRUE
+                                       , force_new = FALSE
                                        )
                , pattern = map(indice_df)
                , format = "file"

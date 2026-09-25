@@ -106,7 +106,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = temporal_run
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
@@ -136,7 +136,7 @@ targets <- list(
                          , mask = env_df$path[grepl("bio01", env_df$name)]
                          , fill_val = 0
                          , out_file = gsub("frequency__", "wo__", freq)
-                         , force_new = TRUE
+                         , force_new = FALSE
                          # dots to writeRaster
                          , overwrite = TRUE
                          , datatype = "INT1U"

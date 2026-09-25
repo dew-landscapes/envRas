@@ -110,7 +110,7 @@ targets <- list(
                                                 , cloud_mask = NULL
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$grain_time
-                                                , force_new = TRUE
+                                                , force_new = FALSE
                                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
@@ -133,7 +133,7 @@ targets <- list(
                                          , base_grid_path = aggregate_grid_path
                                          , in_res = settings$grain$res_x
                                          , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
-                                         , force_new = TRUE
+                                         , force_new = FALSE
                                          , agg_func = "mean"
                                          )
                , format = "file"
@@ -143,7 +143,7 @@ targets <- list(
                                          , base_grid_path = aggregate_grid_path
                                          , in_res = settings$grain$res_x
                                          , out_res = envFunc::extract_scale("coarse", scales = scales_file)$grain$res_x
-                                         , force_new = TRUE
+                                         , force_new = FALSE
                                          , agg_func = "sd"
                                          )
                , format = "file"
