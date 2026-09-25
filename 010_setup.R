@@ -128,5 +128,11 @@ list(
                                )
                , format = "file"
                )
+  , tar_target(lulayers
+               , readr::write_csv(envRaster::ras_layers
+                                  , file = fs::path(extent_dir, "lookup_layers.csv")
+                                  )
+               , format = "file"
+               )
   )
 
