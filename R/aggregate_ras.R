@@ -20,7 +20,7 @@ aggregate_ras <- function(input_ras_path
   
   out_file <- fs::path(cube_dir
                        , dir_df$out_dir
-                       , basename(input_ras_path)
+                       , gsub("__.*__", paste0("__", agg_func, "__"), basename(input_ras_path))
                        )
   
   if(any(!file.exists(out_file), force_new)) {
