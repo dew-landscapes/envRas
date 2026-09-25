@@ -128,10 +128,13 @@ list(
                                )
                , format = "file"
                )
+  , tar_target(ras_layers
+               , envRaster::ras_layers
+               )
   , tar_target(lulayers
-               , readr::write_csv(envRaster::ras_layers
-                                  , file = fs::path(extent_dir, "lookup_layers.csv")
-                                  )
+               , rio::export(ras_layers
+                             , file = fs::path(extent_dir, "lookup_layers.csv")
+                             )
                , format = "file"
                )
   )
