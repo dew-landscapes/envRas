@@ -95,12 +95,6 @@ list(
                  tidyr::pivot_longer(cols = tidyselect::any_of(env_df$name)) |>
                  envFunc::summarise_long_df() |>
                  envRaster::add_env_info() |>
-                 dplyr::mutate(dplyr::across(c(mean, sd, max, min
-                                               , tidyselect::matches("^q\\d{2}")
-                                               )
-                                             , \(x) (x * scale) + offset
-                                             )
-                               ) |>
                  dplyr::mutate(env_id = gsub("[[:punct:]]", "", name))
                )
   )
