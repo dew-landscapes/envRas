@@ -172,12 +172,9 @@ targets <- list(
                )
   ## indices------
   , tar_target(index_prep
-               , reflectance_df |>
-                 dplyr::bind_cols(tibble::enframe(reflectance, name = "branch", value = "path")) |>
-                 dplyr::select(! c(dplyr::where(is.list)
-                                   , scale, offset, nbart_layer, branch, path
-                                   )
-                               )
+               , envRaster::name_env_tif(cube_directory, parse = TRUE) |>
+                 dplyr::inner_join(tibble::enframe(reflectance, name = "branch", value = "path")) |>
+                 dplyr::select(layer, start_date)
                )
   ### indice_df --------
   , tar_target(indice_df
