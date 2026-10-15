@@ -52,7 +52,6 @@ list(
                                                        , base_dir = envFunc::get_env_dir(linux_default = settings$cube_dir)
                                                        )$path
                                  )
-               , format = "file"
                )
   ## maps -------
   ### extent sf -------
@@ -82,7 +81,6 @@ list(
                                , set_source = settings_satellite
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path

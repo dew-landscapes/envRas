@@ -44,7 +44,6 @@ targets <- list(
                                , set_source = settings_tc
                                , cube_dir = settings$cube_dir
                                )
-               , format = "file"
                )
   ### base grid -------
   , tar_target(base_grid_path

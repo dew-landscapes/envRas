@@ -17,6 +17,6 @@ make_cube_dir <- function(set_scale
   
   dir <- gsub("__\\/", "/", dir)
   
-  fs::dir_create(dir)
+  base::dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   
 }

@@ -34,35 +34,34 @@ targets <- list(
   tar_file_read(settings
                 , fs::path(tars$setup$store, "objects", "settings")
                 , readRDS(!!.x)
-  )
+                )
   , tar_target(scales_file
                , "settings/scales.yaml"
                , format = "file"
-  )
+               )
   ### climate ------
   , tar_file_read(settings_climate
                   , "settings/climate.yaml"
                   , yaml::read_yaml(!!.x)
-  )
+                  )
   ## external objects ------
   , tar_file_read(extent_sf
                   , fs::path(tars$setup$store, "objects", "extent_sf")
                   , readRDS(!!.x)
-  )
+                  )
   ## cube directory ------
   , tar_target(cube_directory
                , make_cube_dir(set_scale = envFunc::extract_scale("coarse", scales = scales_file)
                                , set_source = settings_climate
                                , cube_dir = settings$cube_dir
+                               )
                )
-               , format = "file"
-  )
   ## prep -------
   ### dates -------
   , tar_file_read(date_df
                   , fs::path(tars$setup$store, "objects", "date_df")
                   , arrow::read_parquet(!!.x)
-  )
+                  )
   ## raw climate -------
   , tar_target(raw_scales
                , envFunc::extract_scale("raw_climate"
