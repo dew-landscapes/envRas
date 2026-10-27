@@ -21,6 +21,8 @@ tar_source(c("R/get_items.R"
 # tar options ------
 envTargets::env_tar_option_set("wo")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 targets <- list(
   # targets --------
   ## settings -------

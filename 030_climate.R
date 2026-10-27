@@ -22,6 +22,8 @@ mappings <- yaml::read_yaml("settings/climate.yaml")$layers
 # tar options --------
 envTargets::env_tar_option_set("climate")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 targets <- list(
   # targets --------
   ## settings -------

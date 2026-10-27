@@ -1,5 +1,5 @@
 data_dir: "/projects/data"
-cube_dir: "/mnt/envcube"
+cube_dir: "/mnt/cube_admin"
 # crs
 crs:
   proj: 8059 # for projected

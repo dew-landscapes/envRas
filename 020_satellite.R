@@ -15,8 +15,10 @@ tar_source(c("R/make_cube_dir.R"
              )
            )
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 # tar options --------
-envTargets::env_tar_option_set("satellite")
+# envTargets::env_tar_option_set("satellite") # should just run sequentially
 
 targets <- list(
   # targets --------

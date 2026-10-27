@@ -44,8 +44,7 @@ list(
                , envRaster::name_env_tif(x = cube_directory, parse = TRUE) |>
                  dplyr::filter(start_date == max(start_date)
                                , .by = c(layer, func)
-                               ) |>
-                 dplyr::filter(! grepl("ecosystems", path))
+                               )
                )
   ## random -------
   #### split ------
@@ -71,13 +70,9 @@ list(
                , pattern = map(tiles_df)
                )
   #### apply ---------
-  , tar_target(env_paths
-               , env_df$path
-               , format = "file"
-               )
   , tar_target(name = random_env_branches
                , command = make_env_df(points_df = random_points
-                                       , env_paths = env_paths
+                                       , env_paths = env_df$path
                                        , in_epsg = settings$crs$decdeg # comes from out_epsg in random_points
                                        )
                , pattern = map(random_points)

@@ -3,7 +3,7 @@ make_cube_dir <- function(set_scale
                           , cube_dir
                           ) {
   
-  dir <- fs::path(cube_dir
+  a <- fs::path(cube_dir
                   , envRaster::name_env_tif(x = c(set_scale$extent
                                                   , set_scale$grain
                                                   , source = list(set_source$source)
@@ -15,8 +15,16 @@ make_cube_dir <- function(set_scale
                                             )$out_dir
                   )
   
-  dir <- gsub("__\\/", "/", dir)
+  a <- gsub("__\\/", "/", a)
   
-  base::dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  if(!dir.exists(a)) {
+  
+    b <- base::dir.create(a, recursive = TRUE, showWarnings = FALSE)
+    
+    if(!b) stop("failed to create ", a)
+    
+  }
+  
+  return(a)
   
 }

@@ -9,6 +9,8 @@ library(crew)
 # tar options -------
 envTargets::env_tar_option_set("setup")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 # source -------
 tar_source(c("R/save_geoparquet.R"
              , "R/path_create_tar.R"

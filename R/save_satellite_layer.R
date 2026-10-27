@@ -7,7 +7,7 @@ save_satellite_layer <- function(items
                                  , cloud_mask = NULL
                                  , base_dir
                                  , period
-                                 , cores = envFunc::use_cores()
+                                 , cores = 1
                                  , force_new = TRUE
                                  , ...
                                  , gdalcubes_config = list(VSI_CACHE = "TRUE"
@@ -18,7 +18,7 @@ save_satellite_layer <- function(items
                                                            , GDAL_DISABLE_READDIR_ON_OPEN = "EMPTY_DIR"
                                                            , GDAL_HTTP_VERSION = "2"
                                                            , GDAL_HTTP_MERGE_CONSECUTIVE_RANGES = "YES"
-                                                           , GDAL_NUM_THREADS = cores
+                                                           # , GDAL_NUM_THREADS = cores
                                                            )
                                  ) {
   

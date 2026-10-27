@@ -19,6 +19,8 @@ tar_source(c("R/get_items.R"
 # tar options ------
 envTargets::env_tar_option_set("dem")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 targets <- list(
   # targets --------
   ## settings -------
@@ -110,7 +112,7 @@ targets <- list(
                                                 , base_dir = cube_directory
                                                 , period = settings$grain$grain_time
                                                 , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/setup.yaml")$max_cores)
+                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                                 # gdalcubes::write_tif args
                                                 , pack = list(type = "int16"
                                                               , scale = dem_df$scale

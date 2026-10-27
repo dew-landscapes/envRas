@@ -15,6 +15,8 @@ tar_source(c("R/save_soil_layer.R"
 # tar options ------
 envTargets::env_tar_option_set("soil")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 # targets --------
 targets <- list(
   ## settings -------

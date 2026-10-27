@@ -17,6 +17,8 @@ tar_source(c("R/make_cube_dir.R"
 # tar options --------
 envTargets::env_tar_option_set("fire")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 mappings <- yaml::read_yaml("settings/fire.yaml")$methods
 
 # targets --------

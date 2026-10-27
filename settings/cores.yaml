@@ -1,2 +1,2 @@
 max_cores: 100 # use deployment = "main" to prevent parallel downloads
-process_cores: 20
+process_cores: 30

@@ -17,6 +17,8 @@ tar_source(c("R/make_cube_dir.R"
 # tar options ------
 envTargets::env_tar_option_set("canopy")
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
 targets <- list(
   # targets --------
   ## settings -------
@@ -64,5 +66,6 @@ targets <- list(
                                    , datatype = "INT1U"
                                    , names = "chm"
                                    )
+               , format = "file"
                )
   )
