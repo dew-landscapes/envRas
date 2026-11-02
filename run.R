@@ -42,24 +42,21 @@ if(FALSE) {
   # individual tar_make-------
   
   script <- "setup"
+  tar_config_set(store = tars[[script]]$store
+                 , script = tars[[script]]$script
+                 )
   
-  tar_visnetwork(script = tars_local[[script]]$script
-                 , store = tars_local[[script]]$store
-                 , label = "time"
+  tar_visnetwork(label = "time"
                  , physics = TRUE
                  )
   
   # tar_invalidate(report, store = tars_local[[script]]$store)
   
-  tar_make(script = tars_local[[script]]$script
-           , store = tars_local[[script]]$store
-           )
+  tar_make()
   
-  tar_prune(script = tars_local[[script]]$script
-           , store = tars_local[[script]]$store
-           )
+  tar_prune()
   
-  tar_meta(fields = any_of("error"), complete_only = TRUE, store = tars_local[[script]]$store)
-  tar_meta(fields = any_of("warnings"), complete_only = TRUE, store = tars_local[[script]]$store)
+  tar_meta(fields = any_of("error"), complete_only = TRUE)
+  tar_meta(fields = any_of("warnings"), complete_only = TRUE)
   
 }

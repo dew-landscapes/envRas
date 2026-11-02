@@ -13,23 +13,21 @@ tmap_options(basemap.server = c(OSM = "OpenTopoMap"
 tars <- yaml::read_yaml("_targets.yaml")
 
 script <- "setup"
-
-targets::tar_config_set(store = tars[[script]]$store)
+targets::tar_config_set(store = tars[[script]]$store
+                        , script = tars[[script]]$script
+                        )
 
 if(FALSE) {
   
   # individual tar_make-------
   
-  tar_visnetwork(script = tars[[script]]$script
-                 , store = tars[[script]]$store
-                 , label = "time"
-                 )
+  tar_visnetwork(label = "time")
   
-  tar_poll(store = tars[[script]]$store)
-  tar_dispatched(store = tars[[script]]$store)
+  tar_poll()
+  tar_dispatched()
   
-  tar_meta(fields = any_of("error"), complete_only = TRUE, store = tars[[script]]$store)
-  tar_meta(fields = any_of("warnings"), complete_only = TRUE, store = tars[[script]]$store)
+  tar_meta(fields = any_of("error"), complete_only = TRUE)
+  tar_meta(fields = any_of("warnings"), complete_only = TRUE)
   
 }
 
