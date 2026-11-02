@@ -1,0 +1,15 @@
+
+# satellite ------
+source: "DEA"
+
+source_url: "https://explorer.sandbox.dea.ga.gov.au/stac"
+  
+collection: "multi_scale_topographic_position"
+  
+layers:
+  - "local"
+  - "intermediate"
+  - "regional"
+  
+func:
+  - "mean"

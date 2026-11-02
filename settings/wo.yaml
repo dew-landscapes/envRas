@@ -9,3 +9,6 @@ collection:
   
 layers:
   - "frequency"
+  
+func:
+  - "mean"

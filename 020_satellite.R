@@ -15,13 +15,18 @@ tar_source(c("R/make_cube_dir.R"
              )
            )
 
-targets::tar_option_set(trust_timestamps = TRUE)
 
 # tar options --------
-# envTargets::env_tar_option_set("satellite") # should just run sequentially
+envTargets::env_tar_option_set("satellite"
+                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                                                              , name = "main_controller"
+                                                              )
+                               )
 
+targets::tar_option_set(trust_timestamps = TRUE)
+
+# targets --------
 targets <- list(
-  # targets --------
   ## settings -------
   ### setup -------
   tar_file_read(settings
@@ -76,105 +81,49 @@ targets <- list(
                                                                        )
                                                    )
                                )
+               , pattern = map(date_df)
                )
-  ## reflectance --------
+  ## satellite --------
   , tar_target(name = temporal_run
                , envFunc::find_name(settings, "run_time")
                )
-  ### reflectance df --------
-  , tar_target(reflectance_df
-               , tibble::tibble(nbart_layer = settings_satellite$layers) |>
-                 dplyr::mutate(layer = gsub("nbart_", "", nbart_layer)) |>
-                 dplyr::cross_join(items) |>
-                 dplyr::left_join(envRaster::ras_layers |>
-                                    dplyr::select(layer, scale, offset) |>
-                                    dplyr::distinct()
-                                  )
+  ### download df --------
+  , tar_target(download_df
+               , make_download_df(date_df = date_df
+                                  , settings = settings_satellite
+                                  ) |>
+                 dplyr::mutate(layer = paste0("nbart_", layer))
+               , format = "parquet"
                )
-  ### reflectance --------
-  , tar_target(name = reflectance
-               , command = save_satellite_layer(items = reflectance_df$items[[1]]
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = reflectance_df$nbart_layer
-                                                , start_date = reflectance_df$start_date
-                                                , end_date = reflectance_df$end_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = temporal_run
-                                                , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
-                                                # gdalcubes::write_tif args
-                                                , pack = list(type = "int16"
-                                                              , scale = reflectance_df$scale
-                                                              , offset = reflectance_df$offset
-                                                              , nodata = -32768
-                                                              )
-                                                )
-               , pattern = map(reflectance_df)
+  ### download --------
+  , tar_target(download
+               , save_dea_layer(items = download_df |>
+                                  dplyr::left_join(items) |>
+                                  dplyr::pull(items)
+                                , base_grid = terra::rast(base_grid_path)
+                                , layer = download_df$layer
+                                , agg_func = download_df$func
+                                , start_date = download_df$start_date
+                                , end_date = download_df$end_date
+                                , cloud_mask = NULL
+                                , base_dir = cube_directory
+                                , period = settings$grain$grain_time
+                                , force_new = FALSE
+                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
+                                # gdalcubes::write_tif args
+                                , pack = list(type = "int16"
+                                              , scale = download_df$scale
+                                              , offset = download_df$offset
+                                              , nodata = -32768
+                                              )
+                                )
                , format = "file"
-               , deployment = "main"
-               )
-  ## variability -----
-  ### variability_df------
-  , tar_target(name = variability_df
-               , tibble::tibble(layer = settings_satellite$variability) |>
-                 dplyr::cross_join(items) |>
-                 dplyr::left_join(envRaster::ras_layers |>
-                                    dplyr::select(layer, scale, offset)
-                                  )
-               )
-  ### mean --------
-  , tar_target(name = variability
-               , command = save_satellite_layer(items = variability_df$items[[1]]
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = variability_df$layer
-                                                , agg_func = "mean"
-                                                , start_date = variability_df$start_date
-                                                , end_date = variability_df$end_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = temporal_run
-                                                , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
-                                                # no pack
-                                                , pack = list(type = "int16"
-                                                              , scale = variability_df$scale
-                                                              , offset = variability_df$offset
-                                                              , nodata = -32768
-                                                              )
-                                                )
-               , pattern = map(variability_df)
-               , format = "file"
-               , deployment = "main"
-               )
-  ### max --------
-  , tar_target(name = max
-               , command = save_satellite_layer(items = variability_df$items[[1]]
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = variability_df$layer
-                                                , agg_func = "max"
-                                                , start_date = variability_df$start_date
-                                                , end_date = variability_df$end_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = temporal_run
-                                                , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
-                                                # no pack
-                                                , pack = list(type = "int16"
-                                                              , scale = variability_df$scale
-                                                              , offset = variability_df$offset
-                                                              , nodata = -32768
-                                                              )
-                                                )
-               , pattern = map(variability_df)
-               , format = "file"
-               , deployment = "main"
+               , pattern = map(download_df)
                )
   ## indices------
   , tar_target(index_prep
                , envRaster::name_env_tif(cube_directory, parse = TRUE) |>
-                 dplyr::inner_join(tibble::enframe(reflectance, name = "branch", value = "path")) |>
+                 dplyr::inner_join(tibble::enframe(download, name = "branch", value = "path")) |>
                  dplyr::select(layer, start_date)
                )
   ### indice_df --------

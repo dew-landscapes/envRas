@@ -17,8 +17,12 @@ tar_source(c("R/make_cube_dir.R"
              )
            )
 
-# tar options ------
-envTargets::env_tar_option_set("fc")
+# tar options --------
+envTargets::env_tar_option_set("fc"
+                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                                                              , name = "main_controller"
+                                                              )
+                               )
 
 targets::tar_option_set(trust_timestamps = TRUE)
 
@@ -79,41 +83,36 @@ targets <- list(
                                                    )
                                )
                )
-  ## layers --------
-  ### temporal run ------
-  , tar_target(name = temporal_run
-               , envFunc::find_name(settings, "run_time")
-               )
-  ### layer df --------
-  , tar_target(fc_df
-               , tibble::tibble(layer = settings_fc$layers) |>
-                 dplyr::cross_join(items) |>
-                 dplyr::left_join(envRaster::ras_layers |>
-                                    dplyr::select(layer, scale, offset)
+  ## fc --------
+  ### df --------
+  , tar_target(download_df
+               , make_download_df(date_df = date_df
+                                  , settings = settings_fc
                                   )
                )
   ### download --------
-  , tar_target(name = fc
-               , command = save_satellite_layer(items = fc_df$items[[1]]
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = fc_df$layer
-                                                , agg_func = "mean"
-                                                , start_date = fc_df$start_date
-                                                , end_date = fc_df$end_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = temporal_run
-                                                , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
-                                                # gdalcubes::write_tif args
-                                                , pack = list(type = "uint8"
-                                                              , scale = fc_df$scale
-                                                              , offset = fc_df$offset
-                                                              , nodata = 0
-                                                              )
-                                                )
-               , pattern = map(fc_df)
+  , tar_target(download
+               , save_dea_layer(items = download_df |>
+                                  dplyr::left_join(items) |>
+                                  dplyr::pull(items)
+                                , base_grid = terra::rast(base_grid_path)
+                                , layer = download_df$layer
+                                , agg_func = download_df$func
+                                , start_date = download_df$start_date
+                                , end_date = download_df$end_date
+                                , cloud_mask = NULL
+                                , base_dir = cube_directory
+                                , period = settings$grain$grain_time
+                                , force_new = FALSE
+                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
+                                # gdalcubes::write_tif args
+                                , pack = list(type = "int16"
+                                              , scale = download_df$scale
+                                              , offset = download_df$offset
+                                              , nodata = -32768
+                                              )
+                                )
                , format = "file"
-               , deployment = "main"
+               , pattern = map(download_df)
                )
   )

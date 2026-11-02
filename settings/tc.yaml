@@ -9,3 +9,6 @@ layers:
   - "wet_pc_10"
   - "wet_pc_50"
   - "wet_pc_90"
+  
+func:
+  - "median"

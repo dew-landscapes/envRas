@@ -15,3 +15,6 @@ layers:
   - "npv_pc_10"
   - "npv_pc_50"
   - "npv_pc_90"
+  
+func:
+  - "median"

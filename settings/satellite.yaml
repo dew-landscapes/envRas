@@ -10,18 +10,16 @@ collection:
   - "ga_ls8cls9c_gm_cyear_3" 
   
 layers:
-  - "nbart_blue"
-  - "nbart_red"
-  - "nbart_green"
-  - "nbart_swir_1"
-  - "nbart_swir_2"
-  # - "nbart_coastal_aerosol" # doesn't appear to be in the calendar year collection
-  - "nbart_nir"
+  - "blue"
+  - "red"
+  - "green"
+  - "swir_1"
+  - "swir_2"
+  # - "coastal_aerosol" # doesn't appear to be in the calendar year collection
+  - "nir"
   
-variability:
-  - "sdev"
-  - "edev"
-  - "bcdev"
+func:
+  - median
 
 indices:
   ndvi:

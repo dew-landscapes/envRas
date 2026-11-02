@@ -18,8 +18,12 @@ tar_source(c("R/get_items.R"
              )
            )
 
-# tar options ------
-envTargets::env_tar_option_set("wo")
+# tar options --------
+envTargets::env_tar_option_set("wo"
+                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                                                              , name = "main_controller"
+                                                              )
+                               )
 
 targets::tar_option_set(trust_timestamps = TRUE)
 
@@ -84,41 +88,38 @@ targets <- list(
                                                    )
                                )
                )
-  ## layers --------
-  , tar_target(name = temporal_run
-               , envFunc::find_name(settings, "run_time")
-               )
-  ### layer df --------
-  , tar_target(wo_df
-               , tibble::tibble(layer = settings_wo$layers) |>
-                 dplyr::cross_join(items) |>
-                 dplyr::left_join(envRaster::ras_layers |>
-                                    dplyr::select(layer, scale, offset)
+  ## wo --------
+  ### df --------
+  , tar_target(download_df
+               , make_download_df(date_df = date_df
+                                  , settings = settings_wo
                                   )
+               , format = "parquet"
                )
   ### download --------
-  , tar_target(name = freq
-               , command = save_satellite_layer(items = wo_df$items[[1]]
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = wo_df$layer
-                                                , agg_func = "mean"
-                                                , start_date = wo_df$start_date
-                                                , end_date = wo_df$end_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = temporal_run
-                                                , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
-                                                # gdalcubes::write_tif args
-                                                , pack = list(type = "int16"
-                                                              , scale = wo_df$scale
-                                                              , offset = wo_df$offset
-                                                              , nodata = -32768
-                                                              )
-                                                )
-               , pattern = map(wo_df)
+  , tar_target(download
+               , save_dea_layer(items = download_df |>
+                                  dplyr::left_join(items) |>
+                                  dplyr::pull(items)
+                                , base_grid = terra::rast(base_grid_path)
+                                , layer = download_df$layer
+                                , agg_func = download_df$func
+                                , start_date = download_df$start_date
+                                , end_date = download_df$end_date
+                                , cloud_mask = NULL
+                                , base_dir = cube_directory
+                                , period = settings$grain$grain_time
+                                , force_new = FALSE
+                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
+                                # gdalcubes::write_tif args
+                                , pack = list(type = "int16"
+                                              , scale = download_df$scale
+                                              , offset = download_df$offset
+                                              , nodata = -32768
+                                              )
+                                )
                , format = "file"
-               , deployment = "main"
+               , pattern = map(download_df)
                )
   ## fill NA values ----------
   # 'steep' areas get NA values in water observation. who knows why, really.

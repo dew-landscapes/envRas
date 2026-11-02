@@ -18,9 +18,14 @@ tar_source(c("R/make_cube_dir.R"
            )
 
 # tar options --------
-envTargets::env_tar_option_set("tc")
+envTargets::env_tar_option_set("tc"
+                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                                                              , name = "main_controller"
+                                                              )
+                               )
 
 targets::tar_option_set(trust_timestamps = TRUE)
+
 
 targets <- list(
   # targets --------
@@ -79,39 +84,40 @@ targets <- list(
                                                    )
                                )
                )
-  ## layers --------
+  ## tc --------
   , tar_target(name = temporal_run
                , envFunc::find_name(settings, "run_time")
                )
-  ### layer df --------
-  , tar_target(tc_df
-               , tibble::tibble(layer = settings_tc$layers) |>
-                 dplyr::cross_join(items) |>
-                 dplyr::left_join(envRaster::ras_layers |>
-                                    dplyr::select(layer, scale, offset)
+  ### df --------
+  , tar_target(download_df
+               , make_download_df(date_df = date_df
+                                  , settings = settings_tc
                                   )
+               , format = "parquet"
                )
   ### download --------
-  , tar_target(name = tc
-               , command = save_satellite_layer(items = tc_df$items[[1]]
-                                                , base_grid = terra::rast(base_grid_path)
-                                                , layer = tc_df$layer
-                                                , start_date = tc_df$start_date
-                                                , end_date = tc_df$end_date
-                                                , cloud_mask = NULL
-                                                , base_dir = cube_directory
-                                                , period = temporal_run
-                                                , force_new = FALSE
-                                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
-                                                # gdalcubes::write_tif args
-                                                , pack = list(type = "int16"
-                                                              , scale = tc_df$scale
-                                                              , offset = tc_df$offset
-                                                              , nodata = -32768
-                                                              )
-                                                )
-               , pattern = map(tc_df)
+  , tar_target(download
+               , save_dea_layer(items = download_df |>
+                                  dplyr::left_join(items) |>
+                                  dplyr::pull(items)
+                                , base_grid = terra::rast(base_grid_path)
+                                , layer = download_df$layer
+                                , agg_func = download_df$func
+                                , start_date = download_df$start_date
+                                , end_date = download_df$end_date
+                                , cloud_mask = NULL
+                                , base_dir = cube_directory
+                                , period = settings$grain$grain_time
+                                , force_new = FALSE
+                                , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
+                                # gdalcubes::write_tif args
+                                , pack = list(type = "int16"
+                                              , scale = download_df$scale
+                                              , offset = download_df$offset
+                                              , nodata = -32768
+                                              )
+                                )
                , format = "file"
-               , deployment = "main"
+               , pattern = map(download_df)
                )
   )
