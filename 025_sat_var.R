@@ -10,8 +10,8 @@ tars <- yaml::read_yaml("_targets.yaml")
 tar_source(c("R/make_cube_dir.R"
              , "R/make_date_df.R"
              , "R/get_items.R"
-             , "R/save_satellite_layer.R"
-             , "R/make_indice.R"
+             , "R/make_download_df.R"
+             , "R/save_dea_layer.R"
              )
            )
 
