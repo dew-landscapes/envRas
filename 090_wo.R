@@ -92,6 +92,9 @@ targets <- list(
   , tar_target(download_df
                , make_download_df(date_df = date_df
                                   , settings = settings_wo
+                                  , base_dir = cube_directory
+                                  , force_new = FALSE
+                                  , filter_done = FALSE # need all the 'download's for later fill_NA
                                   )
                , format = "parquet"
                )
@@ -107,7 +110,7 @@ targets <- list(
                                 , end_date = download_df$end_date
                                 , cloud_mask = NULL
                                 , base_dir = cube_directory
-                                , period = settings$grain$grain_time
+                                , period = settings$grain$run_time
                                 , force_new = FALSE
                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                 # gdalcubes::write_tif args
@@ -133,18 +136,18 @@ targets <- list(
                , format = "parquet"
                )
   , tar_target(wo
-               , fill_NA(r = freq
+               , fill_NA(r = download
                          , mask = env_df$path[grepl("bio01", env_df$name)]
                          , fill_val = 0
-                         , out_file = gsub("frequency__", "wo__", freq)
+                         , out_file = gsub("frequency__", "wo__", download)
                          , force_new = FALSE
                          # dots to writeRaster
                          , overwrite = TRUE
                          , datatype = "INT1U"
-                         , scale = wo_df$scale
-                         , offset = wo_df$offset
+                         , scale = download_df$scale
+                         , offset = download_df$offset
                          )
-               , pattern = map(freq, wo_df)
+               , pattern = map(download, download_df)
                , format = "file"
                )
 )

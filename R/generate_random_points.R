@@ -32,6 +32,7 @@ generate_random_points <- function(extent_df
                      sf::st_transform(crs = out_epsg) |>
                      sf::st_coordinates() |>
                      tibble::as_tibble() |>
+                     dplyr::arrange(X, Y) |>
                      dplyr::rename(!!rlang::ensym(out_x) := X
                                    , !!rlang::ensym(out_y) := Y
                                    )

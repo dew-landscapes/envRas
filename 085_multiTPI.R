@@ -99,6 +99,8 @@ targets <- list(
   , tar_target(download_df
                , make_download_df(date_df = date_df
                                   , settings = settings_multiTPI
+                                  , base_dir = cube_directory
+                                  , force_new = FALSE
                                   )
                , format = "parquet"
                )
@@ -114,7 +116,7 @@ targets <- list(
                                 , end_date = download_df$end_date
                                 , cloud_mask = NULL
                                 , base_dir = cube_directory
-                                , period = settings$grain$grain_time
+                                , period = settings$grain$run_time
                                 , force_new = FALSE
                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                 # gdalcubes::write_tif args

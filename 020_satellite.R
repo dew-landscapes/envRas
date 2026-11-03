@@ -85,13 +85,12 @@ targets <- list(
                , pattern = map(date_df)
                )
   ## satellite --------
-  , tar_target(name = temporal_run
-               , envFunc::find_name(settings, "run_time")
-               )
   ### download df --------
   , tar_target(download_df
                , make_download_df(date_df = date_df
                                   , settings = settings_satellite
+                                  , base_dir = cube_directory
+                                  , force_new = FALSE
                                   ) |>
                  dplyr::mutate(layer = paste0("nbart_", layer))
                , format = "parquet"
@@ -108,7 +107,7 @@ targets <- list(
                                 , end_date = download_df$end_date
                                 , cloud_mask = NULL
                                 , base_dir = cube_directory
-                                , period = settings$grain$grain_time
+                                , period = settings$grain$run_time
                                 , force_new = FALSE
                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                 # gdalcubes::write_tif args
@@ -120,52 +119,5 @@ targets <- list(
                                 )
                , format = "file"
                , pattern = map(download_df)
-               )
-  ## indices------
-  , tar_target(index_prep
-               , envRaster::name_env_tif(cube_directory, parse = TRUE) |>
-                 dplyr::inner_join(tibble::enframe(download, name = "branch", value = "path")) |>
-                 dplyr::select(layer, start_date)
-               )
-  ### indice_df --------
-  , tar_target(indice_df
-               , settings_satellite$indices |>
-                 tibble::as_tibble() |>
-                 dplyr::mutate(layer_index = paste0("layer_", dplyr::row_number())) |>
-                 tidyr::pivot_longer(tidyselect::any_of(names(settings_satellite$indices))
-                                     , names_to = "index"
-                                     , values_to = "layer"
-                                     ) |>
-                 dplyr::inner_join(index_prep
-                                   , relationship = "many-to-many"
-                                   ) |>
-                 dplyr::mutate(layer = fs::path(cube_directory
-                                               , paste0(layer
-                                                        , "__median__"
-                                                        , start_date
-                                                        , ".tif"
-                                                        )
-                                               )
-                               ) |>
-                 tidyr::pivot_wider(names_from = layer_index
-                                    , values_from = layer
-                                    ) |>
-                 dplyr::rename(layer = index) |>
-                 dplyr::left_join(envRaster::ras_layers |>
-                                    dplyr::select(layer, scale, offset)
-                                  )
-               )
-  ### mung -------
-  , tar_target(name = indice
-               , command = make_indice(index_name = indice_df$layer
-                                       , path_1 = indice_df$layer_1
-                                       , path_2 = indice_df$layer_2
-                                       , scale = indice_df$scale
-                                       , offset = indice_df$offset
-                                       , terra_options = list(memfrac = 0.1)
-                                       , force_new = FALSE
-                                       )
-               , pattern = map(indice_df)
-               , format = "file"
                )
   )

@@ -30,79 +30,74 @@ save_dea_layer <- function(items
                                                      )
                            ) {
   
-  stopifnot(length(out_file) == 1)
-  
-  if(all(file.exists(out_file), ! force_new)) return(out_file)
-  
-  if(! "rstac_doc" %in% class(items)) {
+  if(any(! file.exists(out_file), force_new)) {
     
-    items <- items[[1]]
-  
-  }
-    
-  if(items$numberReturned) {
-    
-    # gdalcubes config--------
-    purrr::iwalk(gdalcubes_config
-                 , \(x, idx) gdalcubes::gdalcubes_set_gdal_config(as.character(idx), as.character(x))
-                 )
-  
-    gdalcubes::gdalcubes_options(parallel = cores)
-    on.exit(gdalcubes::gdalcubes_options(parallel = FALSE))
-    
-    layer_to_get <- items |>
-      rstac::items_assets() |>
-      grep(paste0("^", layer, "$"), x = _, value = TRUE)
-    
-    coll <- gdalcubes::stac_image_collection(items$features
-                                             , asset_names = layer_to_get
-                                             )
-    
-    use_extent <- c(as.list(sf::st_bbox(base_grid)) |> purrr::set_names(c("left", "bottom", "right", "top"))
-                    , t0 = as.character(start_date)
-                    , t1 = as.character(end_date)
-                    )
-    
-    view <- gdalcubes::cube_view(srs = paste0("EPSG:", terra::crs(base_grid, describe = T)$code)
-                                 , dx = terra::res(base_grid)[1]
-                                 , dy = terra::res(base_grid)[2]
-                                 , dt = period
-                                 , extent = use_extent
-                                 , aggregation = agg_func
-                                 , resampling = "bilinear"
-                                 )
-    
-    r <- gdalcubes::raster_cube(coll
-                                , view
-                                , mask = if(!is.null(cloud_mask)) cloud_mask else NULL
-                                ) |>
-      gdalcubes::select_bands(layer_to_get)
-    
-    res <- gdalcubes::write_tif(r
-                                , dir = base_dir
-                                , prefix = paste0(gsub("nbart_", "", layer)
-                                                  , "__"
-                                                  , agg_func
-                                                  , "__"
-                                                  )
-                                , ...
-                                )
-    
-    if(! identical(res, out_file)) {
+    if(! "rstac_doc" %in% class(items)) {
       
-      fs::file_copy(res, out_file)
-      fs::file_delete(res)
+      items <- items[[1]]
+    
+    }
+      
+    if(items$numberReturned) {
+      
+      # gdalcubes config--------
+      purrr::iwalk(gdalcubes_config
+                   , \(x, idx) gdalcubes::gdalcubes_set_gdal_config(as.character(idx), as.character(x))
+                   )
+    
+      gdalcubes::gdalcubes_options(parallel = cores)
+      on.exit(gdalcubes::gdalcubes_options(parallel = FALSE))
+      
+      layer_to_get <- items |>
+        rstac::items_assets() |>
+        grep(paste0("^", layer, "$"), x = _, value = TRUE)
+      
+      coll <- gdalcubes::stac_image_collection(items$features
+                                               , asset_names = layer_to_get
+                                               )
+      
+      use_extent <- c(as.list(sf::st_bbox(base_grid)) |> purrr::set_names(c("left", "bottom", "right", "top"))
+                      , t0 = as.character(start_date)
+                      , t1 = as.character(end_date)
+                      )
+      
+      view <- gdalcubes::cube_view(srs = paste0("EPSG:", terra::crs(base_grid, describe = T)$code)
+                                   , dx = terra::res(base_grid)[1]
+                                   , dy = terra::res(base_grid)[2]
+                                   , dt = period
+                                   , extent = use_extent
+                                   , aggregation = agg_func
+                                   , resampling = "bilinear"
+                                   )
+      
+      r <- gdalcubes::raster_cube(coll
+                                  , view
+                                  , mask = if(!is.null(cloud_mask)) cloud_mask else NULL
+                                  ) |>
+        gdalcubes::select_bands(layer_to_get)
+      
+      res <- gdalcubes::write_tif(r
+                                  , dir = base_dir
+                                  , prefix = paste0(gsub("nbart_", "", layer)
+                                                    , "__"
+                                                    , agg_func
+                                                    , "__"
+                                                    )
+                                  , ...
+                                  )
+      
+      result <- out_file
+      
+    } else {
+      
+      result <- NULL
       
     }
     
-    return(out_file)
-    
-  } else {
-    
-    return(NULL)
-    
-  }
+  } else result <- out_file
   
+  return(as.character(result))
+    
 }
 
 

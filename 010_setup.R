@@ -128,8 +128,10 @@ list(
                                )
                , format = "file"
                )
-  , tar_target(ras_layers
+  , tar_change(ras_layers
                , envRaster::ras_layers
+               , change = fs::file_info(system.file("data/Rdata.rds", package = "envRaster"))$modification_time
+               , format = "parquet"
                )
   , tar_target(lulayers
                , rio::export(ras_layers

@@ -9,7 +9,6 @@ tars <- yaml::read_yaml("_targets.yaml")
 # source ------
 tar_source(c("R/make_cube_dir.R"
              , "R/make_date_df.R"
-             , "R/get_items.R"
              , "R/make_download_df.R"
              , "R/save_dea_layer.R"
              )
@@ -62,7 +61,7 @@ targets <- list(
                   , arrow::read_parquet(!!.x)
                   )
   ### items ------
-  , tar_change(items
+  , tar_change(items_from_sat
                , targets::tar_read(items, store = tars$satellite$store)
                , change = targets::tar_meta(items
                                             , fields = data
@@ -70,20 +69,19 @@ targets <- list(
                                             )$data
                )
   ## sat_var --------
-  , tar_target(name = temporal_run
-               , envFunc::find_name(settings, "run_time")
-               )
-  ### sat_var df --------
+  ### download df --------
   , tar_target(download_df
                , make_download_df(date_df = date_df
                                   , settings = settings_sat_var
+                                  , base_dir = cube_directory
+                                  , force_new = FALSE
                                   )
                , format = "parquet"
                )
   ### download --------
   , tar_target(download
                , save_dea_layer(items = download_df |>
-                                  dplyr::left_join(items) |>
+                                  dplyr::left_join(items_from_sat) |>
                                   dplyr::pull(items)
                                 , base_grid = terra::rast(base_grid_path)
                                 , layer = download_df$layer
@@ -92,7 +90,7 @@ targets <- list(
                                 , end_date = download_df$end_date
                                 , cloud_mask = NULL
                                 , base_dir = cube_directory
-                                , period = settings$grain$grain_time
+                                , period = settings$grain$run_time
                                 , force_new = FALSE
                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                 # gdalcubes::write_tif args

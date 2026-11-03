@@ -7,11 +7,7 @@ library(crew)
 tars <- yaml::read_yaml("_targets.yaml")
 
 # source ------
-tar_source(c("R/generate_random_env.R"
-             , "R/generate_random_points.R"
-             , "R/make_env_df.R"
-             )
-           )
+tar_source(c("R/generate_random_points.R"))
 
 # tar options -------
 envTargets::env_tar_option_set("random")
@@ -36,18 +32,19 @@ list(
                   , readRDS(!!.x)
                   )
   ## env_df (rasters) --------
-  , tar_target(cube_directory
-               , dirname(targets::tar_read(cube_directory, store = tars$setup$store))
-               , format = "file"
-               )
   , tar_target(env_df
-               , envRaster::name_env_tif(x = cube_directory, parse = TRUE) |>
-                 dplyr::filter(start_date == max(start_date)
-                               , .by = c(layer, func)
-                               )
+               , envRaster::prepare_env(set_list = list(extent = settings$extent, grain = settings$grain)
+                                        , base_dir = settings$cube_dir
+                                        , max_date_only = FALSE
+                                        )
+               , format = "parquet"
+               )
+  , tar_target(env_df_nested
+               , env_df |>
+                 tidyr::nest(data = -c(start_date))
                )
   ## random -------
-  #### split ------
+  ### split ------
   , tar_target(base_grid_path
                , targets::tar_read(base_grid_path, store = tars$satellite$store)
                , format = "file"
@@ -66,31 +63,45 @@ list(
                                         , base_grid_path = base_grid_path
                                         , samp_prop = settings_random$samp_prop
                                         , out_epsg = settings$crs$decdeg
-                                        )
+                                        ) |>
+                 envClean::filter_geo_range(use_aoi = extent_sf)
                , pattern = map(tiles_df)
                )
-  #### apply ---------
-  , tar_target(name = random_env_branches
-               , command = make_env_df(points_df = random_points
-                                       , env_paths = env_df$path
-                                       , in_epsg = settings$crs$decdeg # comes from out_epsg in random_points
-                                       )
-               , pattern = map(random_points)
-               , format = "parquet"
+  ### apply ---------
+  , tar_target(random_env_branches
+               , env_df_nested |>
+                 dplyr::mutate(env = purrr::map(data
+                                                , \(x) envRaster::add_raster_bin(ras = envRaster::make_env_stack(predictors = x$path)
+                                                                                 , df = random_points
+                                                                                 , add_val = TRUE
+                                                                                 , crs_df = settings$crs$decdeg
+                                                                                 )
+                                                )
+                               ) |>
+                 dplyr::select(start_date, env)
+               , pattern = map(env_df_nested)
                )
-  #### combine -------
+  ### combine -------
   , tar_target(random_env
-               , dplyr::bind_rows(random_env_branches)
+               , dplyr::bind_rows(random_env_branches) |>
+                 tidyr::unnest(cols = c(env))
                , format = "parquet"
                )
-  ### env info
+  ## env info ------
   , tar_target(env_df_info
-               , random_env |>
-                 dplyr::filter(!is.na(cell_lat), !is.na(cell_long)) |>
-                 tidyr::pivot_longer(cols = tidyselect::any_of(env_df$name)) |>
-                 envFunc::summarise_long_df() |>
-                 envRaster::add_env_info() |>
-                 dplyr::mutate(env_id = gsub("[[:punct:]]", "", name))
+               , random_env_branches |>
+                 dplyr::mutate(data_sum = purrr::map(env
+                                                     , \(x) x |>
+                                                       dplyr::filter(!is.na(cell_lat), !is.na(cell_long)) |>
+                                                       tidyr::pivot_longer(cols = tidyselect::any_of(env_df$name)) |>
+                                                       envFunc::summarise_long_df()
+                                                     )
+                               ) |>
+                 dplyr::select(start_date, data_sum) |>
+                 tidyr::unnest(cols = c(data_sum)) |>
+                 envRaster::add_env_info()
+               , pattern = map(random_env_branches)
+               , format = "parquet"
                )
   )
 
