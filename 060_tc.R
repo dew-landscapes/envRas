@@ -92,6 +92,7 @@ targets <- list(
                                   , base_dir = cube_directory
                                   , force_new = FALSE
                                   )
+               , cue = targets::tar_cue("always")
                , format = "parquet"
                )
   ### download --------

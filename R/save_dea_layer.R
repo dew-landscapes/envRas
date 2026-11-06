@@ -38,7 +38,7 @@ save_dea_layer <- function(items
     
     }
       
-    if(items$numberReturned) {
+    if(all(items$numberReturned > 0, !is.null(items$numberReturned))) {
       
       # gdalcubes config--------
       purrr::iwalk(gdalcubes_config

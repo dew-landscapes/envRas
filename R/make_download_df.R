@@ -30,7 +30,13 @@ make_download_df <- function(date_df
   
   if(nrow(result) == 0) {
     
-    result <- tibble::tibble()
+    result <- tibble::tibble(layer = NA
+                             , func = NA
+                             , start_date = NA
+                             , end_date = NA
+                             , scale = NA
+                             , offset = NA
+                             )
     
   }
   

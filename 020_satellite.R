@@ -93,6 +93,7 @@ targets <- list(
                                   , force_new = FALSE
                                   ) |>
                  dplyr::mutate(layer = paste0("nbart_", layer))
+               , cue = targets::tar_cue("always")
                , format = "parquet"
                )
   ### download --------

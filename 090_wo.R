@@ -96,6 +96,7 @@ targets <- list(
                                   , force_new = FALSE
                                   , filter_done = FALSE # need all the 'download's for later fill_NA
                                   )
+               , cue = targets::tar_cue("always")
                , format = "parquet"
                )
   ### download --------
