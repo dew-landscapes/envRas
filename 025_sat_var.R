@@ -17,7 +17,7 @@ tar_source(c("R/make_cube_dir.R"
 
 # tar options --------
 envTargets::env_tar_option_set("sat_var"
-                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                               , controller_local_args = list(workers = 2
                                                               , name = "main_controller"
                                                               )
                                )

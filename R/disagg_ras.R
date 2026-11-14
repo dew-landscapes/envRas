@@ -6,6 +6,7 @@ disagg_ras <- function(input_ras_path
                        , out_dir = dirname(base_grid_path)
                        , force_new = TRUE
                        , proj_method = "bilinear"
+                       , terra_options = list(memfrac = 0.1)
                        ) {
   
   out_file <- fs::path(out_dir
@@ -16,6 +17,14 @@ disagg_ras <- function(input_ras_path
   if(any(!file.exists(out_file), force_new)) {
     
     if(!dir.exists(basename(out_file))) fs::dir_create(dirname(out_file))
+    
+    if(!is.null(terra_options)) {
+      
+      do.call(terra::terraOptions
+              , args = terra_options
+              )
+      
+    }
     
     base <- terra::rast(base_grid_path)
     

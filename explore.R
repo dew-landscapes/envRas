@@ -12,7 +12,7 @@ tmap_options(basemap.server = c(OSM = "OpenTopoMap"
 # tars -------
 tars <- yaml::read_yaml("_targets.yaml")
 
-script <- "setup"
+script <- "sat_var"
 targets::tar_config_set(store = tars[[script]]$store
                         , script = tars[[script]]$script
                         )
@@ -46,6 +46,22 @@ if(FALSE) {
     purrr::walk(\(x) terra::rast(x) |>
                   terra::plot(main = gsub("\\.tif", "", basename(x)))
                 )
+  
+}
+
+if(FALSE) {
+  
+  # check last tifs --------
+  tar_read(cube_directory) |>
+    envRaster::name_env_tif(parse = TRUE) |>
+    dplyr::mutate(mod_time = purrr::map(path, \(x) fs::file_info(x)$modification_time)) |>
+    tidyr::unnest(cols = c(mod_time)) |>
+    dplyr::arrange(desc(mod_time)) |>
+    dplyr::select(layer, func, start_date, path, mod_time) |>
+    dplyr::slice(1:16) |>
+    dplyr::pull(path) |>
+    envRaster::make_env_stack() |>
+    terra::plot()
   
 }
 

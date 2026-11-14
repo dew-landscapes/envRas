@@ -118,6 +118,9 @@ targets <- list(
                                 , base_dir = cube_directory
                                 , period = settings$grain$run_time
                                 , force_new = FALSE
+                                , out_file = fs::path(base_dir
+                                                      , paste0(download_df$layer, "__", download_df$func, "__static.tif")
+                                                      )
                                 , cores = envFunc::use_cores(absolute_max = yaml::read_yaml("settings/cores.yaml")$process_cores)
                                 # gdalcubes::write_tif args
                                 , pack = list(type = "int16"

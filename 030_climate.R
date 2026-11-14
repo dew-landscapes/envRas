@@ -20,9 +20,17 @@ tar_source(c("R/make_date_df.R"
 mappings <- yaml::read_yaml("settings/climate.yaml")$layers
 
 # tar options --------
-envTargets::env_tar_option_set("climate")
+envTargets::env_tar_option_set("climate"
+                               , controller_local_args = list(workers = 5
+                                                              , tasks_max = 1
+                                                              , name = "main_controller"
+                                                              )
+                               )
 
-targets::tar_option_set(trust_timestamps = TRUE)
+targets::tar_option_set(trust_timestamps = TRUE
+                        , storage = "worker"
+                        , retrieval = "worker"
+                        )
 
 targets <- list(
   # targets --------

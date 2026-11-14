@@ -19,7 +19,8 @@ tar_source(c("R/get_items.R"
 
 # tar options --------
 envTargets::env_tar_option_set("wo"
-                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                               , controller_local_args = list(workers = 2
+                                                              , tasks_max = 1
                                                               , name = "main_controller"
                                                               )
                                )

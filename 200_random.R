@@ -63,8 +63,7 @@ list(
                                         , base_grid_path = base_grid_path
                                         , samp_prop = settings_random$samp_prop
                                         , out_epsg = settings$crs$decdeg
-                                        ) |>
-                 envClean::filter_geo_range(use_aoi = extent_sf)
+                                        )
                , pattern = map(tiles_df)
                )
   ### apply ---------
@@ -80,6 +79,7 @@ list(
                                ) |>
                  dplyr::select(start_date, env)
                , pattern = map(env_df_nested)
+               , deployment = "main"
                )
   ### combine -------
   , tar_target(random_env
@@ -93,7 +93,7 @@ list(
                  dplyr::mutate(data_sum = purrr::map(env
                                                      , \(x) x |>
                                                        dplyr::filter(!is.na(cell_lat), !is.na(cell_long)) |>
-                                                       tidyr::pivot_longer(cols = tidyselect::any_of(env_df$name)) |>
+                                                       tidyr::pivot_longer(cols = tidyselect::any_of(unique(env_df$name))) |>
                                                        envFunc::summarise_long_df()
                                                      )
                                ) |>

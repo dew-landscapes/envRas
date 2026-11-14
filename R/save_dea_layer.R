@@ -12,6 +12,7 @@ save_dea_layer <- function(items
                            , out_file = fs::path(base_dir
                                                  , paste0(gsub("nbart_", "", layer), "__", agg_func, "__", start_date, ".tif")
                                                  )
+                           , is_static = grepl("__static.tif$", out_file)
                            , ...
                            , gdalcubes_config = list(VSI_CACHE = "TRUE",
                                                      VSI_CACHE_SIZE = "50000000",
@@ -86,11 +87,28 @@ save_dea_layer <- function(items
                                   , ...
                                   )
       
-      result <- out_file
-      
     } else {
       
-      result <- NULL
+      res <- NULL
+      
+    }
+    
+    if(is_static) {
+      
+      if(!is.null(res)) {
+        
+        new_file <-gsub("[0-9]{4}-[0-9]{2}-[0-9]{2}(?=\\.tif$)"
+                        , "static"
+                        , res
+                        ) 
+        
+        fs::file_copy(res
+                      , new_file
+                      )
+        
+        if(file.exists(new_file)) fs::file_delete(res)
+        
+      }  
       
     }
     

@@ -19,7 +19,8 @@ tar_source(c("R/make_cube_dir.R"
 
 # tar options --------
 envTargets::env_tar_option_set("fc"
-                               , controller_local_args = list(workers = yaml::read_yaml("settings/cores.yaml")$download_cores
+                               , controller_local_args = list(workers = 2
+                                                              , tasks_max = 1
                                                               , name = "main_controller"
                                                               )
                                )
